@@ -10,6 +10,10 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "find-my-way": "^2.1.2",
     "reflect-metadata": "^0.1.13"
+  },
+  "devDependencies": {
+    "@types/node": "^12.7.11"
   }
 }

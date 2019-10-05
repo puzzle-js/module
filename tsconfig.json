@@ -2,8 +2,13 @@
   "compilerOptions": {
     "target": "ES2017",
     "module": "commonjs",
+    "types": [
+      "node"
+    ],
     "outDir": "./dist",
     "sourceMap": true,
+    "strict": true,
+    "noImplicitAny": true,
     "declaration": true,
     "esModuleInterop": true,
     "experimentalDecorators": true,
