@@ -1,0 +1,9 @@
+enum SERVICE_TYPE {
+  MODULE,
+  API,
+  FRAGMENT
+}
+
+export {
+  SERVICE_TYPE
+}

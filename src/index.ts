@@ -1,3 +1,7 @@
+import {ApiService, Module, get} from "./decorators";
+
 export = {
-  test: 5
+  Module,
+  ApiService,
+  get
 };
