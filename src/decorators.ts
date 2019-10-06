@@ -11,9 +11,9 @@ function module(configuration: ModuleConfiguration) {
   }
 }
 
-function injectable<T extends { new(...args: any[]): {} }>(constructor: T) {
+function  injectable<T extends { new(...args: any[]): {} }>(constructor: T) {
   Reflect.defineMetadata(META_TYPES.TYPE, SERVICE_TYPE.INJECTABLE, constructor);
-  IOC.register(constructor.name, constructor);
+  IOC.register(constructor);
 }
 
 function apiService(path: string) {
@@ -23,7 +23,17 @@ function apiService(path: string) {
     Reflect.defineMetadata(META_TYPES.TYPE, SERVICE_TYPE.API, constructor);
     Reflect.defineMetadata(META_TYPES.PATH, path, constructor);
 
-    IOC.register(constructor.name, constructor);
+    IOC.register(constructor);
+  }
+}
+
+function dataService(fragment: string) {
+  if (!fragment) throw new Error('Fragment name must be provided');
+
+  return <T extends { new(...args: any[]): {} }>(constructor: T) => {
+    Reflect.defineMetadata(META_TYPES.TYPE, SERVICE_TYPE.API, constructor);
+
+    IOC.register(constructor);
   }
 }
 
@@ -96,6 +106,7 @@ export {
   injectable,
   module,
   apiService,
+  dataService,
   get,
   post,
   put,

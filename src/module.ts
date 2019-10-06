@@ -42,6 +42,10 @@ class Module {
     });
   };
 
+  getRouter(){
+    return this.router;
+  }
+
   async onBeforeInit(): Promise<any> {
     return;
   }

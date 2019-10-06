@@ -2,12 +2,12 @@ import "reflect-metadata"
 import {constructor} from "./types";
 
 class IOC {
-  private static IOC_REGISTRIES: Map<string, {
+  static IOC_REGISTRIES: Map<string, {
     ctor: constructor,
-    instance?: object
+    instance?: any
   }> = new Map();
 
-  static get(ctor: constructor): object {
+  static get<T>(ctor: constructor): T {
     const ioc_registry = this.IOC_REGISTRIES.get(ctor.name);
 
     if (!ioc_registry) {
@@ -19,6 +19,7 @@ class IOC {
     }
 
     const injections = this.getInjections(ctor) || [];
+
 
     const injectionInstances = injections.map(injection => {
       return this.get(injection);
@@ -34,10 +35,14 @@ class IOC {
     return instance;
   }
 
-  static register(ctorName: string, ctor: constructor) {
-    this.IOC_REGISTRIES.set(ctorName, {
+  static register(ctor: constructor) {
+    this.IOC_REGISTRIES.set(ctor.name, {
       ctor
     });
+  }
+
+  static clear() {
+    this.IOC_REGISTRIES.clear();
   }
 
   private static getInjections(ctor: constructor): constructor[] {

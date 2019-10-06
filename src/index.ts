@@ -1,4 +1,4 @@
-import {apiService, module, get, injectable, put, post, del} from "./decorators";
+import {apiService, dataService, del, get, injectable, module, post, put} from "./decorators";
 import {Module} from "./module";
 
 export = {
@@ -12,5 +12,6 @@ export = {
   injectable,
   put,
   post,
+  dataService,
   del
 };
