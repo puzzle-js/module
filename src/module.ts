@@ -14,7 +14,9 @@ class Module {
 
     assertType(this.constructor, SERVICE_TYPE.MODULE);
     const configuration = Reflect.getMetadata(META_TYPES.CONFIGURATION, this.constructor) as ModuleConfiguration;
+
     configuration.bootstrap.forEach(service => this.registerModules(service));
+
     console.log(this.router.prettyPrint());
   }
 
@@ -34,6 +36,9 @@ class Module {
   private connectApi(service: any) {
     const handlers = Reflect.getMetadata(META_TYPES.API_HANDLERS, service) as ApiHandler[];
     const pathPrefix = Reflect.getMetadata(META_TYPES.PATH, service);
+
+    console.log(handlers, pathPrefix, service);
+
 
     const apiInstance = IOC.get(service) as any;
 

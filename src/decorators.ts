@@ -31,7 +31,8 @@ function dataService(fragment: string) {
   if (!fragment) throw new Error('Fragment name must be provided');
 
   return <T extends { new(...args: any[]): {} }>(constructor: T) => {
-    Reflect.defineMetadata(META_TYPES.TYPE, SERVICE_TYPE.API, constructor);
+    Reflect.defineMetadata(META_TYPES.TYPE, SERVICE_TYPE.DATA_PROVIDER, constructor);
+    Reflect.defineMetadata(META_TYPES.FRAGMENT, fragment, constructor);
 
     IOC.register(constructor);
   }
