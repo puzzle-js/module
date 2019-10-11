@@ -1,11 +1,23 @@
 import {expect} from "chai";
-import {module, apiService, dataService, del, get, injectable, post, put} from "../src/decorators";
+import {
+  module,
+  api,
+  data,
+  del,
+  get,
+  injectable,
+  post,
+  put,
+  handler,
+  render
+} from "../src/decorators";
 import {Module} from "../src/module";
 
 describe('[index.ts]', () => {
   it('should export lib contents', () => {
     // Act
     const exports = require('../src');
+
 
     // Assert
     expect(exports).to.deep.eq({
@@ -14,9 +26,11 @@ describe('[index.ts]', () => {
       put,
       del,
       Module,
+      render,
+      handler,
       injectable,
-      dataService,
-      apiService,
+      data,
+      api,
       module
     });
   });
