@@ -1,9 +1,17 @@
 import "reflect-metadata";
-import {ApiHandler, constructor, HTTP_METHODS, ModuleConfiguration, RenderOptions} from "./types";
+import {
+  ApiHandler,
+  constructor,
+  DataOptions,
+  EndpointOptions,
+  HTTP_METHODS,
+  ModuleConfiguration,
+  RenderOptions
+} from "./types";
 import {META_TYPES, SERVICE_TYPE} from "./enums";
 import {IOC} from "./ioc";
 import {getDecoratedFile} from "./helpers";
-
+import fastJsonStringify from "fast-json-stringify";
 
 /**
  * @description Sets class as Base Module which will be bootstrapped by PuzzleJs
@@ -43,13 +51,16 @@ function api(path: string) {
 /**
  * @description Sets class as data provider for fragment
  * @param fragment
+ * @param dataOptions
  */
-function data(fragment: string) {
+function data(fragment: string, dataOptions?: DataOptions) {
   if (!fragment) throw new Error('Fragment name must be provided');
 
   return <T extends { new(...args: any[]): {} }>(constructor: T) => {
     Reflect.defineMetadata(META_TYPES.TYPE, SERVICE_TYPE.DATA_PROVIDER, constructor);
     Reflect.defineMetadata(META_TYPES.FRAGMENT, fragment, constructor);
+    Reflect.defineMetadata(META_TYPES.CONFIGURATION, dataOptions || {}, constructor);
+    Reflect.defineMetadata(META_TYPES.FILE_PATH, getDecoratedFile(), constructor);
 
     if (!Reflect.getMetadata(META_TYPES.HANDLER, constructor)) throw new Error(`@handler decorator not added to data service(${constructor.name}) handler method`);
 
@@ -68,7 +79,7 @@ function render(fragment: string, renderOptions?: RenderOptions) {
   return <T extends { new(...args: any[]): {} }>(constructor: T) => {
     Reflect.defineMetadata(META_TYPES.TYPE, SERVICE_TYPE.RENDER_ENGINE, constructor);
     Reflect.defineMetadata(META_TYPES.FRAGMENT, fragment, constructor);
-    Reflect.defineMetadata(META_TYPES.CONFIGURATION, renderOptions, constructor);
+    Reflect.defineMetadata(META_TYPES.CONFIGURATION, renderOptions || {}, constructor);
     Reflect.defineMetadata(META_TYPES.FILE_PATH, getDecoratedFile(), constructor);
 
     if (!Reflect.getMetadata(META_TYPES.HANDLER, constructor)) throw new Error(`@handler decorator not added to render service(${constructor.name}) handler method`);
@@ -89,48 +100,53 @@ function handler(target: any, propertyKey: string) {
 /**
  * @description Sets method as http GET handler
  * @param path
+ * @param options
  */
-function get(path: string) {
+
+function get(path: string, options?: EndpointOptions) {
   if (!path) throw new Error('Get path must be provided');
 
   return function (target: any, propertyKey: string) {
-    addRouteType(target.constructor, path, propertyKey, 'get');
+    addRouteType(target.constructor, path, propertyKey, 'get', options);
   };
 }
 
 /**
  * @description Sets method as http PUT handler
  * @param path
+ * @param options
  */
-function put(path: string) {
+function put(path: string, options?: EndpointOptions) {
   if (!path) throw new Error('Put path must be provided');
 
   return function (target: any, propertyKey: string) {
-    addRouteType(target.constructor, path, propertyKey, 'put');
+    addRouteType(target.constructor, path, propertyKey, 'put', options);
   };
 }
 
 /**
  * @description Sets method as http DELETE handler
  * @param path
+ * @param options
  */
-function del(path: string) {
+function del(path: string, options?: EndpointOptions) {
   if (!path) throw new Error('Del path must be provided');
 
   return function (target: any, propertyKey: string) {
-    addRouteType(target.constructor, path, propertyKey, 'delete');
+    addRouteType(target.constructor, path, propertyKey, 'delete', options);
   };
 }
 
 /**
  * @description Sets method as http POST handler
  * @param path
+ * @param options
  */
-function post(path: string) {
+function post(path: string, options?: EndpointOptions) {
   if (!path) throw new Error('Post path must be provided');
 
   return function (target: any, propertyKey: string) {
-    addRouteType(target.constructor, path, propertyKey, 'post');
+    addRouteType(target.constructor, path, propertyKey, 'post', options);
   };
 }
 
@@ -148,15 +164,21 @@ const assertType = (target: any, type: SERVICE_TYPE, error?: string) => {
 };
 
 
-const addRouteType = (target: constructor, path: string, handler: string, method: HTTP_METHODS) => {
+const addRouteType = (target: constructor, path: string, handler: string, method: HTTP_METHODS, options?: EndpointOptions) => {
   let handlers = Reflect.getMetadata(META_TYPES.API_HANDLERS, target) as ApiHandler[];
   if (!handlers) handlers = [];
 
-  handlers.push({
+  const handlerMeta = {
     method,
     path,
     handler
-  });
+  } as ApiHandler;
+
+  if(options && options.schema){
+    handlerMeta.stringifier = fastJsonStringify(options.schema);
+  }
+
+  handlers.push(handlerMeta);
 
   Reflect.defineMetadata(META_TYPES.API_HANDLERS, handlers, target);
 };

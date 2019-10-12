@@ -6,10 +6,10 @@ Worker.connect(parentPort);
 
 const renderService = require(workerData.decoratedFile);
 
-const renderClassConstructor = renderService[workerData.serviceName];
+const serviceConstructor = renderService[workerData.serviceName];
 
-const renderInstance = IOC.get(renderClassConstructor) as any;
+const service = IOC.get(serviceConstructor) as any;
 
 parentPort.on('message', (data: any) => {
-  return renderInstance[workerData.renderHandler](data);
+  return service[workerData.handler](data);
 });

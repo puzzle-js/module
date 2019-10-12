@@ -1,11 +1,10 @@
+import {Schema} from "fast-json-stringify";
+
 type constructor = new(...args: any[]) => any;
 
 type HTTP_METHODS = 'get' | 'post' | 'delete' | 'put';
 
-type FRAGMENT_SERVICE = {
-  data?: any;
-  render?: any;
-};
+type Stringifier = (doc: object | any[] | string | number | boolean | null) => string;
 
 interface ModuleConfiguration {
   name: string;
@@ -16,10 +15,19 @@ interface ApiHandler {
   handler: string;
   method: HTTP_METHODS;
   path: string;
+  stringifier?: Stringifier;
 }
 
-interface RenderOptions {
+interface WorkerOptions {
   workers?: number;
+}
+
+interface RenderOptions extends WorkerOptions {
+
+}
+
+interface DataOptions extends WorkerOptions {
+
 }
 
 interface DataRequest {
@@ -40,8 +48,15 @@ type RenderResponse = {
   main: string;
 };
 
+interface EndpointOptions {
+  schema?: Schema;
+}
+
 
 export {
+  DataOptions,
+  Stringifier,
+  EndpointOptions,
   constructor,
   ApiHandler,
   DataRequest,
@@ -49,6 +64,5 @@ export {
   RenderResponse,
   HTTP_METHODS,
   RenderOptions,
-  FRAGMENT_SERVICE,
   ModuleConfiguration
 }

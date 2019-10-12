@@ -1,15 +1,13 @@
 import "reflect-metadata";
 import {assertType} from "./decorators";
 import {API_PREFIX, DEVELOPMENT_PORT, META_TYPES, SERVICE_TYPE} from "./enums";
-import {ApiHandler, constructor, ModuleConfiguration} from "./types";
+import {ApiHandler, constructor, ModuleConfiguration, Stringifier} from "./types";
 import Router from "find-my-way";
 import path from "path";
 import {IOC} from "./ioc";
 import {Fragment} from "./fragment";
 import {detectDevelopmentMode} from "./helpers";
 import {Server} from "./server";
-import {WorkerManager} from "./worker-manager";
-
 
 
 class Module {
@@ -57,10 +55,8 @@ class Module {
         this.connectApi(service);
         break;
       case SERVICE_TYPE.DATA_PROVIDER:
-        this.connectDataProvider(service);
-        break;
       case SERVICE_TYPE.RENDER_ENGINE:
-        this.connectRenderService(service);
+        this.connectFragmentService(service, type);
         break;
     }
   }
@@ -72,29 +68,42 @@ class Module {
     const apiInstance = IOC.get(service) as any;
 
     handlers.forEach(apiHandler => {
-      this.router[apiHandler.method](path.join(API_PREFIX, pathPrefix, apiHandler.path), apiInstance[apiHandler.handler].bind(apiInstance));
+      this.router[apiHandler.method](path.join(API_PREFIX, pathPrefix, apiHandler.path), this.handleApiResponse.bind(this, apiInstance, apiHandler));
     });
   };
 
+  private handleApiResponse(instance: any, handlerMeta: ApiHandler, request: any, response: any) {
+    let data = instance[handlerMeta.handler](request);
 
-  private connectDataProvider(service: constructor) {
-    const fragmentName = Reflect.getMetadata(META_TYPES.FRAGMENT, service) as string;
-
-    let fragment = this.fragments.get(fragmentName);
-    if (!fragment) fragment = new Fragment(fragmentName);
-
-    fragment.setDataService(service);
-
-    this.fragments.set(fragmentName, fragment);
+    if (typeof data.then === 'function') {
+      data.then((resolved: any) => {
+        response.end(this.mapResponseToHTTP(resolved, handlerMeta.stringifier))
+      });
+    } else {
+      response.end(this.mapResponseToHTTP(data, handlerMeta.stringifier))
+    }
   }
 
-  private connectRenderService(service: constructor) {
+  private mapResponseToHTTP(data: any, stringifier?: Stringifier) {
+    if (typeof data === 'object') {
+      return stringifier ? stringifier(data) : JSON.stringify(data);
+    } else {
+      data.toString();
+    }
+  }
+
+
+  private connectFragmentService(service: constructor, type: SERVICE_TYPE) {
     const fragmentName = Reflect.getMetadata(META_TYPES.FRAGMENT, service) as string;
 
     let fragment = this.fragments.get(fragmentName);
     if (!fragment) fragment = new Fragment(fragmentName);
 
-    fragment.setRenderService(service);
+    if (type === SERVICE_TYPE.DATA_PROVIDER) {
+      fragment.setService(service);
+    } else if (type === SERVICE_TYPE.RENDER_ENGINE) {
+      fragment.setService(service);
+    }
 
     this.fragments.set(fragmentName, fragment);
   }
