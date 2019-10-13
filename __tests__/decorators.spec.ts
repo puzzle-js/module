@@ -4,6 +4,9 @@ import * as sinon from "sinon";
 import {IOC} from "../src/ioc";
 import * as faker from "faker";
 import {META_TYPES, SERVICE_TYPE} from "../src/enums";
+import fastJsonStringify from "fast-json-stringify";
+import {ApiHandler, EndpointOptions} from "../src/types";
+
 
 const sandbox = sinon.createSandbox();
 
@@ -358,5 +361,35 @@ describe('[decorators.ts]', () => {
 
     // Assert
     expect(test).to.throw(error);
+  });
+
+  it('should set schema for the route', () => {
+    // Arrange
+    const path = faker.random.word();
+    const endpoint = faker.random.word();
+
+    // Act
+    @api(path)
+    class Api {
+      @post(endpoint, {
+        schema: {
+          type: 'object',
+          properties: {
+            name: {
+              type: 'string'
+            }
+          }
+        }
+      })
+      post() {
+
+      }
+    }
+
+    // Assert
+    const metaType = Reflect.getMetadata(META_TYPES.TYPE, Api);
+    expect(metaType).to.eq(SERVICE_TYPE.API);
+    const metaHandlers = Reflect.getMetadata(META_TYPES.API_HANDLERS, Api) as ApiHandler[];
+    expect(metaHandlers[0].stringifier).to.be.a('function');
   });
 });
