@@ -26,8 +26,14 @@ interface RenderOptions extends WorkerOptions {
 
 }
 
-interface DataOptions extends WorkerOptions {
+type ParsableParams = 'string' | 'number' | 'boolean' | ParsableParamsObject;
 
+type ParsableParamsObject =  {
+  [x: string]: ParsableParams;
+}
+
+interface DataOptions extends WorkerOptions {
+  params: ParsableParamsObject;
 }
 
 interface DataRequest {
@@ -72,5 +78,7 @@ export {
   RenderResponse,
   HTTP_METHODS,
   RenderOptions,
-  ModuleConfiguration
+  ModuleConfiguration,
+  ParsableParamsObject,
+  ParsableParams
 }

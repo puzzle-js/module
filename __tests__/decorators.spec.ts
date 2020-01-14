@@ -3,7 +3,8 @@ import {
   api,
   assertType,
   data,
-  del, error,
+  del,
+  error,
   get,
   handler,
   injectable,
@@ -101,27 +102,12 @@ describe('[decorators.ts]', () => {
     expect(test).to.throw('Api path must be provided');
   });
 
-  it('should throw error if fragment name not provided', () => {
-    // Arrange
-    const test = () => {
-      // @ts-ignore
-      @data()
-      class FragmentData {
-      }
-    };
-
-    // Assert
-    expect(test).to.throw('Fragment name must be provided');
-  });
 
   it('should throw error if data handler not set', () => {
-    // Arrange
-    const fragmentName = faker.random.word();
-
     // Act
     const test = () => {
       // @ts-ignore
-      @data(fragmentName)
+      @data()
       class FragmentData {
       }
     };
@@ -132,11 +118,10 @@ describe('[decorators.ts]', () => {
 
   it('should mark class dataService', () => {
     // Arrange
-    const fragmentName = faker.random.word();
     const stub = sandbox.stub(IOC, 'register');
 
     // Act
-    @data(fragmentName)
+    @data()
     class FragmentData {
       @handler
       handler() {
@@ -146,22 +131,19 @@ describe('[decorators.ts]', () => {
 
     // Assert
     const meta = Reflect.getMetadata(META_TYPES.TYPE, FragmentData);
-    const metaFragment = Reflect.getMetadata(META_TYPES.FRAGMENT, FragmentData);
     expect(meta).to.eq(SERVICE_TYPE.DATA_PROVIDER);
-    expect(metaFragment).to.eq(fragmentName);
     expect(stub.calledWithExactly(FragmentData)).to.eq(true);
   });
 
   it('should mark class as renderService', () => {
     // Arrange
-    const fragmentName = faker.random.word();
     const configuration = {
       workers: faker.random.number()
     };
     const stub = sandbox.stub(IOC, 'register');
 
     // Act
-    @render(fragmentName, configuration)
+    @render(configuration)
     class FragmentRender {
       @handler
       render() {
@@ -171,11 +153,9 @@ describe('[decorators.ts]', () => {
 
     // Assert
     const meta = Reflect.getMetadata(META_TYPES.TYPE, FragmentRender);
-    const metaFragment = Reflect.getMetadata(META_TYPES.FRAGMENT, FragmentRender);
     const metaFile = Reflect.getMetadata(META_TYPES.FILE_PATH, FragmentRender);
     const metaConfiguration = Reflect.getMetadata(META_TYPES.CONFIGURATION, FragmentRender);
     expect(meta).to.eq(SERVICE_TYPE.RENDER_ENGINE);
-    expect(metaFragment).to.eq(fragmentName);
     expect(metaFile).to.eq(__filename);
     expect(metaConfiguration).to.eq(configuration);
     expect(stub.calledWithExactly(FragmentRender)).to.eq(true);
@@ -183,14 +163,13 @@ describe('[decorators.ts]', () => {
 
   it('should throw error if render handler not registered', () => {
     // Arrange
-    const fragmentName = faker.random.word();
     const configuration = {
       workers: faker.random.number()
     };
 
     // Act
     const test = () => {
-      @render(fragmentName, configuration)
+      @render(configuration)
       class FragmentRender {
 
       }
@@ -200,25 +179,10 @@ describe('[decorators.ts]', () => {
     expect(test).to.throw('@handler decorator not added to render service')
   });
 
-  it('should throw error if render fragment name not provided', () => {
-    // Act
-    const test = () => {
-      // @ts-ignore
-      @render()
-      class FragmentData {
-      }
-    };
-
-    // Assert
-    expect(test).to.throw('Fragment name must be provided');
-  });
 
   it('should add handler method to class meta', () => {
-    // Arrange
-    const fragmentName = faker.random.word();
-
     // Act
-    @render(fragmentName)
+    @render()
     class FragmentRender {
       @handler
       render() {
@@ -234,10 +198,9 @@ describe('[decorators.ts]', () => {
   it('should add partials to render', () => {
     // Arrange
     const partial = faker.random.word();
-    const fragmentName = faker.random.word();
 
     // Act
-    @render(fragmentName)
+    @render()
     class FragmentRender {
       @handler
       @partials(['main', partial])
@@ -252,12 +215,8 @@ describe('[decorators.ts]', () => {
   });
 
   it('should add error handler to service', () => {
-    // Arrange
-    const partial = faker.random.word();
-    const fragmentName = faker.random.word();
-
     // Act
-    @render(fragmentName)
+    @render()
     class FragmentRender {
       @handler
       render() {
@@ -265,7 +224,7 @@ describe('[decorators.ts]', () => {
       }
 
       @error
-      error(){
+      error() {
 
       }
     }
@@ -275,112 +234,200 @@ describe('[decorators.ts]', () => {
     expect(handlerMeta).to.eq('error');
   });
 
-  it('should add get route to api', () => {
-    // Arrange
-    const path = faker.random.word();
-    const endpoint = faker.random.word();
+  describe("Api meta decorators", () => {
+    describe("delete", () => {
+      it('should add delete route to api', () => {
+        // Arrange
+        const path = faker.random.word();
+        const endpoint = faker.random.word();
 
-    // Act
-    @api(path)
-    class Api {
-      @get(endpoint)
-      getMethod() {
+        // Act
+        @api(path)
+        class Api {
+          @del(endpoint)
+          del() {
 
-      }
-    }
+          }
+        }
 
-    // Assert
-    const metaType = Reflect.getMetadata(META_TYPES.TYPE, Api);
-    expect(metaType).to.eq(SERVICE_TYPE.API);
-    const metaHandlers = Reflect.getMetadata(META_TYPES.API_HANDLERS, Api);
-    expect(metaHandlers).to.deep.eq([
-      {
-        method: 'get',
-        path: endpoint,
-        handler: 'getMethod'
-      }
-    ])
-  });
+        // Assert
+        const metaType = Reflect.getMetadata(META_TYPES.TYPE, Api);
+        expect(metaType).to.eq(SERVICE_TYPE.API);
+        const metaHandlers = Reflect.getMetadata(META_TYPES.API_HANDLERS, Api);
+        expect(metaHandlers).to.deep.eq([
+          {
+            method: 'delete',
+            path: endpoint,
+            handler: 'del'
+          }
+        ])
+      });
 
-  it('should add post route to api', () => {
-    // Arrange
-    const path = faker.random.word();
-    const endpoint = faker.random.word();
+      it('should throw error when path not provided', () => {
+        // Arrange
+        const path = faker.random.word();
 
-    // Act
-    @api(path)
-    class Api {
-      @post(endpoint)
-      post() {
+        // Act
+        const test = () => {
+          @api(path)
+          class Api {
+            @(del as any)()
+            del() {
 
-      }
-    }
+            }
+          }
+        };
 
-    // Assert
-    const metaType = Reflect.getMetadata(META_TYPES.TYPE, Api);
-    expect(metaType).to.eq(SERVICE_TYPE.API);
-    const metaHandlers = Reflect.getMetadata(META_TYPES.API_HANDLERS, Api);
-    expect(metaHandlers).to.deep.eq([
-      {
-        method: 'post',
-        path: endpoint,
-        handler: 'post'
-      }
-    ])
-  });
+        // Assert
+        expect(test).to.throw('Del path must be provided');
+      });
+    });
 
-  it('should add put route to api', () => {
-    // Arrange
-    const path = faker.random.word();
-    const endpoint = faker.random.word();
+    describe('put', () => {
+      it('should add put route to api', () => {
+        // Arrange
+        const path = faker.random.word();
+        const endpoint = faker.random.word();
 
-    // Act
-    @api(path)
-    class Api {
-      @put(endpoint)
-      put() {
+        // Act
+        @api(path)
+        class Api {
+          @put(endpoint)
+          put() {
 
-      }
-    }
+          }
+        }
 
-    // Assert
-    const metaType = Reflect.getMetadata(META_TYPES.TYPE, Api);
-    expect(metaType).to.eq(SERVICE_TYPE.API);
-    const metaHandlers = Reflect.getMetadata(META_TYPES.API_HANDLERS, Api);
-    expect(metaHandlers).to.deep.eq([
-      {
-        method: 'put',
-        path: endpoint,
-        handler: 'put'
-      }
-    ])
-  });
+        // Assert
+        const metaType = Reflect.getMetadata(META_TYPES.TYPE, Api);
+        expect(metaType).to.eq(SERVICE_TYPE.API);
+        const metaHandlers = Reflect.getMetadata(META_TYPES.API_HANDLERS, Api);
+        expect(metaHandlers).to.deep.eq([
+          {
+            method: 'put',
+            path: endpoint,
+            handler: 'put'
+          }
+        ])
+      });
 
-  it('should add delete route to api', () => {
-    // Arrange
-    const path = faker.random.word();
-    const endpoint = faker.random.word();
+      it('should throw error when path not provided', () => {
+        // Arrange
+        const path = faker.random.word();
 
-    // Act
-    @api(path)
-    class Api {
-      @del(endpoint)
-      del() {
+        // Act
+        const test = () => {
+          @api(path)
+          class Api {
+            @(put as any)()
+            put() {
 
-      }
-    }
+            }
+          }
+        };
 
-    // Assert
-    const metaType = Reflect.getMetadata(META_TYPES.TYPE, Api);
-    expect(metaType).to.eq(SERVICE_TYPE.API);
-    const metaHandlers = Reflect.getMetadata(META_TYPES.API_HANDLERS, Api);
-    expect(metaHandlers).to.deep.eq([
-      {
-        method: 'delete',
-        path: endpoint,
-        handler: 'del'
-      }
-    ])
+        // Assert
+        expect(test).to.throw('Put path must be provided')
+      });
+    });
+
+    describe('post', () => {
+      it('should add post route to api', () => {
+        // Arrange
+        const path = faker.random.word();
+        const endpoint = faker.random.word();
+
+        // Act
+        @api(path)
+        class Api {
+          @post(endpoint)
+          post() {
+
+          }
+        }
+
+        // Assert
+        const metaType = Reflect.getMetadata(META_TYPES.TYPE, Api);
+        expect(metaType).to.eq(SERVICE_TYPE.API);
+        const metaHandlers = Reflect.getMetadata(META_TYPES.API_HANDLERS, Api);
+        expect(metaHandlers).to.deep.eq([
+          {
+            method: 'post',
+            path: endpoint,
+            handler: 'post'
+          }
+        ])
+      });
+
+
+      it('should throw error when path not provided', () => {
+        // Arrange
+        const path = faker.random.word();
+
+        // Act
+        const test = () => {
+          @api(path)
+          class Api {
+            @(post as any)()
+            post() {
+
+            }
+          }
+        };
+
+        // Assert
+        expect(test).to.throw('Post path must be provided')
+      });
+    });
+
+    describe('get', () => {
+      it('should add get route to api', () => {
+        // Arrange
+        const path = faker.random.word();
+        const endpoint = faker.random.word();
+
+        // Act
+        @api(path)
+        class Api {
+          @get(endpoint)
+          getMethod() {
+
+          }
+        }
+
+        // Assert
+        const metaType = Reflect.getMetadata(META_TYPES.TYPE, Api);
+        expect(metaType).to.eq(SERVICE_TYPE.API);
+        const metaHandlers = Reflect.getMetadata(META_TYPES.API_HANDLERS, Api);
+        expect(metaHandlers).to.deep.eq([
+          {
+            method: 'get',
+            path: endpoint,
+            handler: 'getMethod'
+          }
+        ])
+      });
+
+
+      it('should throw error when path not provided', () => {
+        // Arrange
+        const path = faker.random.word();
+
+        // Act
+        const test = () => {
+          @api(path)
+          class Api {
+            @(get as any)()
+            getMethod() {
+
+            }
+          }
+        };
+
+        // Assert
+        expect(test).to.throw('Get path must be provided');
+      });
+    })
   });
 
   it('should assert given constructor meta type', () => {
@@ -401,7 +448,6 @@ describe('[decorators.ts]', () => {
   it('should assert given constructor meta type with throwing custom error', () => {
     // Arrange
     const type = SERVICE_TYPE.INJECTABLE;
-    const error = faker.random.word();
 
 
     class AnyClass {
@@ -412,11 +458,11 @@ describe('[decorators.ts]', () => {
 
     // Act
     const test = () => {
-      assertType(AnyClass, type, error);
+      assertType(AnyClass, type);
     };
 
     // Assert
-    expect(test).to.throw(error);
+    expect(test).to.throw();
   });
 
   it('should set schema for the route', () => {
@@ -449,4 +495,15 @@ describe('[decorators.ts]', () => {
     const metaHandlers = Reflect.getMetadata(META_TYPES.API_HANDLERS, Api) as ApiHandler[];
     expect(metaHandlers[0].stringifier).to.be.a('function');
   });
-});
+
+  it('should ', () => {
+    // Arrange
+
+
+    // Act
+
+
+    // Assert
+  });
+})
+;

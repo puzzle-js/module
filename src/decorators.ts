@@ -14,7 +14,7 @@ import {getDecoratedFile} from "./helpers";
 import fastJsonStringify from "fast-json-stringify";
 
 /**
- * @description Sets class as Base Module which will be bootstrapped by PuzzleJs
+ * @description Sets class as Base Module which will be bootstrapped
  * @param configuration
  */
 function module(configuration: ModuleConfiguration) {
@@ -50,15 +50,11 @@ function api(path: string) {
 
 /**
  * @description Sets class as data provider for fragment
- * @param fragment
  * @param dataOptions
  */
-function data(fragment: string, dataOptions?: DataOptions) {
-  if (!fragment) throw new Error('Fragment name must be provided');
-
+function data(dataOptions?: DataOptions) {
   return <T extends { new(...args: any[]): {} }>(constructor: T) => {
     Reflect.defineMetadata(META_TYPES.TYPE, SERVICE_TYPE.DATA_PROVIDER, constructor);
-    Reflect.defineMetadata(META_TYPES.FRAGMENT, fragment, constructor);
     Reflect.defineMetadata(META_TYPES.CONFIGURATION, dataOptions || {}, constructor);
     Reflect.defineMetadata(META_TYPES.FILE_PATH, getDecoratedFile(), constructor);
 
@@ -70,15 +66,11 @@ function data(fragment: string, dataOptions?: DataOptions) {
 
 /**
  * @description Sets class as render provider for fragment
- * @param fragment
  * @param renderOptions
  */
-function render(fragment: string, renderOptions?: RenderOptions) {
-  if (!fragment) throw new Error('Fragment name must be provided');
-
+function render(renderOptions?: RenderOptions) {
   return <T extends { new(...args: any[]): {} }>(constructor: T) => {
     Reflect.defineMetadata(META_TYPES.TYPE, SERVICE_TYPE.RENDER_ENGINE, constructor);
-    Reflect.defineMetadata(META_TYPES.FRAGMENT, fragment, constructor);
     Reflect.defineMetadata(META_TYPES.CONFIGURATION, renderOptions || {}, constructor);
     Reflect.defineMetadata(META_TYPES.FILE_PATH, getDecoratedFile(), constructor);
 
@@ -183,8 +175,7 @@ const assertType = (target: any, type: SERVICE_TYPE, error?: string) => {
 
 
 const addRouteType = (target: constructor, path: string, handler: string, method: HTTP_METHODS, options?: EndpointOptions) => {
-  let handlers = Reflect.getMetadata(META_TYPES.API_HANDLERS, target) as ApiHandler[];
-  if (!handlers) handlers = [];
+  const handlers = Reflect.getMetadata(META_TYPES.API_HANDLERS, target) as ApiHandler[] || [];
 
   const handlerMeta = {
     method,
@@ -192,7 +183,7 @@ const addRouteType = (target: constructor, path: string, handler: string, method
     handler
   } as ApiHandler;
 
-  if(options && options.schema){
+  if (options && options.schema) {
     handlerMeta.stringifier = fastJsonStringify(options.schema);
   }
 

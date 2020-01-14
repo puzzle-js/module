@@ -1,4 +1,4 @@
-import {constructor, DataOptions, DataRequest, DataResponse, RenderResponse} from "./types";
+import {constructor, DataOptions, DataRequest, DataResponse, ParsableParamsObject, RenderResponse} from "./types";
 import {DEFAULT_RENDER_WORKER_COUNT, META_TYPES, RENDER_TYPES, SERVICE_TYPE} from "./enums";
 import {IOC} from "./ioc";
 import {WorkerManager} from "./worker-manager";
@@ -6,7 +6,7 @@ import fastJsonStringifier from "fast-json-stringify";
 
 
 class Fragment {
-  public name: string;
+  public params!: ParsableParamsObject;
 
   private workerSupported: boolean = false;
   private dataHandler!: (req: DataRequest) => DataResponse | Promise<DataResponse>;
@@ -15,9 +15,7 @@ class Fragment {
   private renderErrorHandler?: (data: DataResponse) => RenderResponse | Promise<RenderResponse>;
   private stringifier!: (data: any) => string;
 
-  constructor(name: string) {
-    this.name = name;
-
+  constructor() {
     this.render = this.render.bind(this);
   }
 
@@ -26,11 +24,15 @@ class Fragment {
    */
   validate() {
     if (!this.dataHandler) {
-      throw new Error(`Data service of fragment ${this.name} is not registered.`);
+      throw new Error(`Data service of fragment is not registered.`);
     }
 
     if (!this.renderHandler) {
-      throw new Error(`Render service of fragment ${this.name} is not registered.`);
+      throw new Error(`Render service of fragment is not registered.`);
+    }
+
+    if (!this.params) {
+      throw new Error(`Data service params of fragment is not provided.`);
     }
   }
 
@@ -45,10 +47,13 @@ class Fragment {
     const configuration = Reflect.getMetadata(META_TYPES.CONFIGURATION, service) as DataOptions;
     const errorHandler = Reflect.getMetadata(META_TYPES.ERROR_HANDLER, service);
 
-
     const handlerName = type === SERVICE_TYPE.RENDER_ENGINE ? 'renderHandler' : 'dataHandler';
 
     if (type === SERVICE_TYPE.RENDER_ENGINE) this.createStringifier(Reflect.getMetadata(META_TYPES.RENDER_PARTIALS, service));
+
+    if (type === SERVICE_TYPE.DATA_PROVIDER) {
+      this.params = configuration.params;
+    }
 
     if (WorkerManager.supported && configuration.workers !== 0) {
       this.workerSupported = true;
@@ -141,7 +146,6 @@ class Fragment {
     const defaultMetaTypes = ['main'].concat(metaTypes || []);
 
     this.stringifier = fastJsonStringifier({
-      title: this.name,
       type: 'object',
       properties: defaultMetaTypes.reduce((schema: any, partial: string) => {
         schema[partial] = {

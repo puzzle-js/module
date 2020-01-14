@@ -7,7 +7,14 @@
   "scripts": {
     "build": "tsc",
     "test": "jest --coverage",
-    "test:watch": "jest --coverage --watchAll"
+    "test:watch": "jest --coverage --watchAll",
+    "check": "gts check",
+    "clean": "gts clean",
+    "compile": "tsc -p .",
+    "fix": "gts fix",
+    "prepare": "npm run compile",
+    "pretest": "npm run compile",
+    "posttest": "npm run check"
   },
   "author": "",
   "license": "ISC",
@@ -21,13 +28,14 @@
     "@types/chai": "^4.2.3",
     "@types/faker": "^4.1.6",
     "@types/jest": "^24.0.18",
-    "@types/node": "^12.7.11",
+    "@types/node": "^10.0.3",
     "@types/sinon": "^7.5.0",
     "chai": "^4.2.0",
     "faker": "^4.1.0",
     "jest": "^24.9.0",
     "sinon": "^7.5.0",
     "ts-jest": "^24.1.0",
-    "typescript": "^3.6.3"
+    "typescript": "~3.7.0",
+    "gts": "^1.1.2"
   }
 }

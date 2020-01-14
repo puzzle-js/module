@@ -2,23 +2,25 @@ import "reflect-metadata";
 import {assertType} from "./decorators";
 import {API_PREFIX, DEVELOPMENT_PORT, META_TYPES, SERVICE_TYPE} from "./enums";
 import {ApiHandler, constructor, ModuleConfiguration, Stringifier} from "./types";
-import Router from "find-my-way";
 import path from "path";
 import {IOC} from "./ioc";
 import {Fragment} from "./fragment";
 import {detectDevelopmentMode} from "./helpers";
 import {Server} from "./server";
+import {Router} from "./router";
 
 
 class Module {
-  private fragments: Map<string, Fragment> = new Map();
-  private router = Router({
-    ignoreTrailingSlash: true
-  });
+  private fragment!: Fragment;
+  private router: Router;
   private developmentModeEnabled = detectDevelopmentMode();
 
-  constructor() {
+  constructor(
+    router: Router
+  ) {
     this.developmentMode();
+
+    this.router = router;
   }
 
   public async init() {
@@ -33,8 +35,10 @@ class Module {
     this.connectConfiguration();
   }
 
-  getRouter() {
-    return this.router.lookup.bind(this.router);
+  public getConfiguration() {
+    return {
+      params: this.fragment.params
+    };
   }
 
   async onBeforeInit(): Promise<any> {
@@ -103,10 +107,8 @@ class Module {
   }
 
   private connectFragmentService(service: constructor, type: SERVICE_TYPE) {
-    const fragmentName = Reflect.getMetadata(META_TYPES.FRAGMENT, service) as string;
-
-    let fragment = this.fragments.get(fragmentName);
-    if (!fragment) fragment = new Fragment(fragmentName);
+    let fragment = this.fragment;
+    if (!fragment) fragment = new Fragment();
 
     if (type === SERVICE_TYPE.DATA_PROVIDER) {
       fragment.setService(service);
@@ -114,21 +116,27 @@ class Module {
       fragment.setService(service);
     }
 
-    this.fragments.set(fragmentName, fragment);
+    this.fragment = fragment;
   }
 
   private connectFragmentToRouter() {
-    this.fragments.forEach(fragmentService => {
-      fragmentService.validate();
-      this.router.get(`/${fragmentService.name}/`, fragmentService.render.bind(fragmentService));
+    this.fragment.validate();
+    this.router.post('/fragment', (req, res) => {
+      if (req.headers.version !== '2') {
+        res.statusCode = 422;
+        res.setHeader('content-type', 'application/json');
+        res.setHeader('version', '2');
+        res.end(JSON.stringify(this.getConfiguration()));
+      } else {
+        res.setHeader('content-type', 'application/json');
+        this.fragment.render(req, res);
+      }
     });
   }
 
   private connectConfiguration() {
-    this.router.get('/__configuration', (req, res) => {
-      res.end(JSON.stringify({
-        fragments: Array.from(this.fragments.values())
-      }))
+    this.router.get('/__/configuration', (req, res) => {
+      res.end(JSON.stringify(this.getConfiguration()));
     });
   }
 }
