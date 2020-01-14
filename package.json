@@ -7,7 +7,7 @@
   "scripts": {
     "build": "tsc",
     "test": "jest --coverage",
-    "test:watch": "jest --watch --coverage"
+    "test:watch": "jest --coverage --watchAll"
   },
   "author": "",
   "license": "ISC",

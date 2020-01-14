@@ -6,19 +6,12 @@ const getDecoratedFile = () => {
   return regex.exec(error.stack!)![1];
 };
 
-const detectDevelopmentMode = () => {
-  try {
-    let parent = module;
-    while (parent.parent && parent.parent.id.length > 1) {
-      parent = parent.parent;
-    }
-
-    const starterFile = parent.id;
-
-    return starterFile === path.join(__dirname, 'index.js');
-  } catch (e) {
-    return false;
+const detectDevelopmentMode = (mainModule = module) => {
+  while (mainModule.parent && mainModule.parent.id.length > 1) {
+    mainModule = mainModule.parent;
   }
+
+  return mainModule.id === path.join(__dirname, 'index.js');
 };
 
 export {

@@ -44,7 +44,7 @@ interface DataResponse {
 }
 
 type RenderResponse = {
-  [key: string]: string;
+  [key: string]: string | number;
   main: string;
 };
 
@@ -52,8 +52,16 @@ interface EndpointOptions {
   schema?: Schema;
 }
 
+interface WorkerProps {
+  decoratedFile: string,
+  serviceName: string,
+  handler: string,
+  errorHandler: string
+}
+
 
 export {
+  WorkerProps,
   DataOptions,
   Stringifier,
   EndpointOptions,

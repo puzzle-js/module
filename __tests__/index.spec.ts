@@ -9,6 +9,8 @@ import {
   post,
   put,
   handler,
+  partials,
+  error,
   render
 } from "../src/decorators";
 import {Module} from "../src/module";
@@ -27,6 +29,8 @@ describe('[index.ts]', () => {
       del,
       Module,
       render,
+      error,
+      partials,
       handler,
       injectable,
       data,

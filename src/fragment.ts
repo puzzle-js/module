@@ -1,15 +1,19 @@
-import {constructor, DataOptions, DataRequest, DataResponse, RenderOptions, RenderResponse} from "./types";
-import {DEFAULT_RENDER_WORKER_COUNT, META_TYPES, SERVICE_TYPE} from "./enums";
+import {constructor, DataOptions, DataRequest, DataResponse, RenderResponse} from "./types";
+import {DEFAULT_RENDER_WORKER_COUNT, META_TYPES, RENDER_TYPES, SERVICE_TYPE} from "./enums";
 import {IOC} from "./ioc";
 import {WorkerManager} from "./worker-manager";
+import fastJsonStringifier from "fast-json-stringify";
 
 
 class Fragment {
   public name: string;
 
   private workerSupported: boolean = false;
-  private dataHandler!: (req: DataRequest) => DataResponse | Promise<DataResponse> ;
+  private dataHandler!: (req: DataRequest) => DataResponse | Promise<DataResponse>;
   private renderHandler!: (data: DataResponse) => RenderResponse | Promise<RenderResponse>;
+  private dataErrorHandler?: (req: DataRequest) => DataResponse | Promise<DataResponse>;
+  private renderErrorHandler?: (data: DataResponse) => RenderResponse | Promise<RenderResponse>;
+  private stringifier!: (data: any) => string;
 
   constructor(name: string) {
     this.name = name;
@@ -39,38 +43,45 @@ class Fragment {
     const handler = Reflect.getMetadata(META_TYPES.HANDLER, service) as string;
     const type = Reflect.getMetadata(META_TYPES.TYPE, service) as SERVICE_TYPE;
     const configuration = Reflect.getMetadata(META_TYPES.CONFIGURATION, service) as DataOptions;
+    const errorHandler = Reflect.getMetadata(META_TYPES.ERROR_HANDLER, service);
 
-    const handlerName = type === SERVICE_TYPE.RENDER_ENGINE ? 'renderHandler': 'dataHandler';
+
+    const handlerName = type === SERVICE_TYPE.RENDER_ENGINE ? 'renderHandler' : 'dataHandler';
+
+    if (type === SERVICE_TYPE.RENDER_ENGINE) this.createStringifier(Reflect.getMetadata(META_TYPES.RENDER_PARTIALS, service));
 
     if (WorkerManager.supported && configuration.workers !== 0) {
       this.workerSupported = true;
       const decoratedFile = Reflect.getMetadata(META_TYPES.FILE_PATH, service) as string;
-      const workerGroup = WorkerManager.createWorkerGroup(decoratedFile, handler, service.name, configuration.workers || DEFAULT_RENDER_WORKER_COUNT);
-      this[handlerName] = (request: DataRequest | DataResponse) => workerGroup.distribute<any>(request);
+      const workerGroup = WorkerManager.createWorkerGroup(decoratedFile, handler, service.name, configuration.workers || DEFAULT_RENDER_WORKER_COUNT, errorHandler);
+      this[handlerName] = (request: DataRequest | DataResponse) => workerGroup.distribute<any>({
+        type: RENDER_TYPES.HANDLER,
+        data: request
+      });
+
+      if (type === SERVICE_TYPE.RENDER_ENGINE) {
+        this.renderErrorHandler = (request: DataResponse) => workerGroup.distribute<any>({
+          type: RENDER_TYPES.ERROR,
+          data: request
+        });
+      } else if (type === SERVICE_TYPE.DATA_PROVIDER) {
+        this.dataErrorHandler = (request: DataRequest) => workerGroup.distribute<any>({
+          type: RENDER_TYPES.ERROR,
+          data: request
+        });
+      }
     } else {
-      const renderService = IOC.get(service) as any;
-      this[handlerName] = renderService[handler].bind(renderService);
+      const serviceInstance = IOC.get(service) as any;
+      if (errorHandler) {
+        if (type === SERVICE_TYPE.RENDER_ENGINE) {
+          this.renderErrorHandler = serviceInstance[errorHandler].bind(serviceInstance);
+        } else if (type === SERVICE_TYPE.DATA_PROVIDER) {
+          this.dataErrorHandler = serviceInstance[errorHandler].bind(serviceInstance);
+        }
+      }
+      this[handlerName] = serviceInstance[handler].bind(serviceInstance);
     }
   }
-  //
-  // /**
-  //  * Sets render service of the fragment
-  //  * @param service
-  //  */
-  // setRenderService(service: constructor) {
-  //   const handler = Reflect.getMetadata(META_TYPES.HANDLER, service) as string;
-  //   const renderConfiguration = Reflect.getMetadata(META_TYPES.CONFIGURATION, service) as RenderOptions;
-  //
-  //   if (WorkerManager.isWorkerSupported() && renderConfiguration.workers !== 0) {
-  //     this.workerSupported = true;
-  //     const decoratedFile = Reflect.getMetadata(META_TYPES.FILE_PATH, service) as string;
-  //     const workerGroup = WorkerManager.createWorkerGroup(decoratedFile, handler, service.name, renderConfiguration.workers || DEFAULT_RENDER_WORKER_COUNT);
-  //     this.renderHandler = (data: DataResponse) => workerGroup.distribute<RenderResponse>(data);
-  //   } else {
-  //     const renderService = IOC.get(service) as any;
-  //     this.renderHandler = renderService[handler].bind(renderService);
-  //   }
-  // }
 
 
   /**
@@ -79,15 +90,71 @@ class Fragment {
    * @param res
    */
   async render(req: any, res: any) {
-    const dataResponse = await this.dataHandler({} as any);
-    const {data} = dataResponse;
-    if (data) {
-      const renderResult = this.workerSupported ? await this.renderHandler(data) : this.renderHandler(data);
-      res.end(JSON.stringify(renderResult));
+    let dataResponse: DataResponse = {};
+
+    dataResponse = await this.dataHandler({} as any);
+    if (!dataResponse) {
+      if (this.dataErrorHandler) {
+        dataResponse = await this.dataErrorHandler({} as any);
+        if (!dataResponse) {
+          dataResponse = {
+            $status: 500
+          };
+        }
+      } else {
+        if (!dataResponse) {
+          dataResponse = {
+            $status: 500
+          };
+        }
+      }
+    }
+
+
+    let renderResponse = {
+      main: ''
+    } as RenderResponse;
+
+    if (dataResponse.data) {
+      renderResponse = await this.renderHandler(dataResponse.data);
+      if (!renderResponse) {
+        if (this.renderErrorHandler) {
+          renderResponse = await this.renderErrorHandler(dataResponse.data);
+          if (!renderResponse) {
+            dataResponse.$status = 500;
+          }
+        } else {
+          dataResponse.$status = 500;
+        }
+      }
+
+      res.end(this.stringifier({
+        ...renderResponse,
+        $status: dataResponse.$status
+      }));
+    } else {
+      res.end(this.stringifier(dataResponse));
     }
   }
 
+  private createStringifier(metaTypes?: string[]) {
+    const defaultMetaTypes = ['main'].concat(metaTypes || []);
 
+    this.stringifier = fastJsonStringifier({
+      title: this.name,
+      type: 'object',
+      properties: defaultMetaTypes.reduce((schema: any, partial: string) => {
+        schema[partial] = {
+          type: 'string'
+        };
+        return schema;
+      }, {
+        $status: {
+          type: 'number'
+        }
+      })
+    })
+  }
 }
 
 export {

@@ -11,34 +11,44 @@ import {Server} from "./server";
 
 
 class Module {
+  private fragments: Map<string, Fragment> = new Map();
   private router = Router({
     ignoreTrailingSlash: true
   });
-  fragments: Map<string, Fragment> = new Map();
+  private developmentModeEnabled = detectDevelopmentMode();
 
   constructor() {
     this.developmentMode();
   }
 
   public async init() {
-    await this.onBeforeInit();
-
     assertType(this.constructor, SERVICE_TYPE.MODULE);
 
+    await this.onBeforeInit();
     const configuration = Reflect.getMetadata(META_TYPES.CONFIGURATION, this.constructor) as ModuleConfiguration;
+
     configuration.bootstrap.forEach(service => this.registerModules(service));
 
-    this.connectFragments();
+    this.connectFragmentToRouter();
+    this.connectConfiguration();
+  }
+
+  getRouter() {
+    return this.router.lookup.bind(this.router);
+  }
+
+  async onBeforeInit(): Promise<any> {
+    return;
   }
 
   private developmentMode() {
-    if (detectDevelopmentMode()) {
+    if (this.developmentModeEnabled) {
       console.info('Development mode enabled, starting module in preview mode');
 
       this
         .init()
         .then(() => {
-          const server = new Server(this.router.lookup.bind(this.router), {port: DEVELOPMENT_PORT});
+          const server = new Server(this.router.lookup.bind(this.router), {port: process.env.PORT ? +process.env.PORT : DEVELOPMENT_PORT});
           console.log(this.router.prettyPrint());
           server.listen(() => {
             console.log(`Server started listening on port ${DEVELOPMENT_PORT}`);
@@ -92,7 +102,6 @@ class Module {
     }
   }
 
-
   private connectFragmentService(service: constructor, type: SERVICE_TYPE) {
     const fragmentName = Reflect.getMetadata(META_TYPES.FRAGMENT, service) as string;
 
@@ -108,19 +117,19 @@ class Module {
     this.fragments.set(fragmentName, fragment);
   }
 
-  private connectFragments() {
+  private connectFragmentToRouter() {
     this.fragments.forEach(fragmentService => {
       fragmentService.validate();
       this.router.get(`/${fragmentService.name}/`, fragmentService.render.bind(fragmentService));
     });
   }
 
-  getRouter() {
-    return this.router.lookup.bind(this.router);
-  }
-
-  async onBeforeInit(): Promise<any> {
-    return;
+  private connectConfiguration() {
+    this.router.get('/__configuration', (req, res) => {
+      res.end(JSON.stringify({
+        fragments: Array.from(this.fragments.values())
+      }))
+    });
   }
 }
 

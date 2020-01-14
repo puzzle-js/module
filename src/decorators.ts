@@ -89,6 +89,24 @@ function render(fragment: string, renderOptions?: RenderOptions) {
 }
 
 /**
+ * Sets error handler for fragments
+ */
+function error(target: any, propertyKey: string) {
+  Reflect.defineMetadata(META_TYPES.ERROR_HANDLER, propertyKey, target.constructor);
+}
+
+/**
+ * Exposes fragment partials from render process
+ * @param partials
+ */
+function partials(partials: string[]) {
+  return function (target: any, propertyKey: string) {
+    Reflect.defineMetadata(META_TYPES.RENDER_PARTIALS, partials, target.constructor);
+
+  };
+}
+
+/**
  * @description Handler method for data or render service
  * @param target
  * @param propertyKey
@@ -184,8 +202,10 @@ const addRouteType = (target: constructor, path: string, handler: string, method
 };
 
 export {
+  partials,
   injectable,
   module,
+  error,
   render,
   handler,
   api,

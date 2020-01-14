@@ -1,11 +1,23 @@
 import {expect} from "chai";
-import {api, assertType, data, del, get, handler, injectable, module, post, put, render} from "../src/decorators";
+import {
+  api,
+  assertType,
+  data,
+  del, error,
+  get,
+  handler,
+  injectable,
+  module,
+  partials,
+  post,
+  put,
+  render
+} from "../src/decorators";
 import * as sinon from "sinon";
 import {IOC} from "../src/ioc";
 import * as faker from "faker";
 import {META_TYPES, SERVICE_TYPE} from "../src/enums";
-import fastJsonStringify from "fast-json-stringify";
-import {ApiHandler, EndpointOptions} from "../src/types";
+import {ApiHandler} from "../src/types";
 
 
 const sandbox = sinon.createSandbox();
@@ -219,6 +231,50 @@ describe('[decorators.ts]', () => {
     expect(handlerMeta).to.eq('render');
   });
 
+  it('should add partials to render', () => {
+    // Arrange
+    const partial = faker.random.word();
+    const fragmentName = faker.random.word();
+
+    // Act
+    @render(fragmentName)
+    class FragmentRender {
+      @handler
+      @partials(['main', partial])
+      render() {
+
+      }
+    }
+
+    // Assert
+    const handlerMeta = Reflect.getMetadata(META_TYPES.RENDER_PARTIALS, FragmentRender);
+    expect(handlerMeta).to.deep.eq(['main', partial]);
+  });
+
+  it('should add error handler to service', () => {
+    // Arrange
+    const partial = faker.random.word();
+    const fragmentName = faker.random.word();
+
+    // Act
+    @render(fragmentName)
+    class FragmentRender {
+      @handler
+      render() {
+
+      }
+
+      @error
+      error(){
+
+      }
+    }
+
+    // Assert
+    const handlerMeta = Reflect.getMetadata(META_TYPES.ERROR_HANDLER, FragmentRender);
+    expect(handlerMeta).to.eq('error');
+  });
+
   it('should add get route to api', () => {
     // Arrange
     const path = faker.random.word();
@@ -385,6 +441,7 @@ describe('[decorators.ts]', () => {
 
       }
     }
+
 
     // Assert
     const metaType = Reflect.getMetadata(META_TYPES.TYPE, Api);
