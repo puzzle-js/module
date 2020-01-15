@@ -12,7 +12,7 @@ class WorkerGroup {
     this.workers = workers;
   }
 
-  async distribute<T>(data: any, timeout: number = DEFAULT_CONTENT_TIMEOUT) {
+  async distribute<T>(data: unknown, timeout: number = DEFAULT_CONTENT_TIMEOUT) {
     if (!this.workers[this.i]) this.i = 0;
     return this.workers[this.i++].postMessageAsync(data, {timeout}) as Promise<T>
   }
@@ -20,12 +20,12 @@ class WorkerGroup {
 
 class WorkerManager {
   static supported: boolean = WorkerManager.isWorkerSupported();
-  static Worker = WorkerManager.getWorkerThreads();
+  static worker = WorkerManager.getWorkerThreads();
 
   static createWorkerGroup(decoratedFile: string, handler: string, serviceName: string, amount: number, errorHandler?: string) {
-    if (!this.Worker) throw new Error('Workers are not supported');
+    if (!this.worker) throw new Error('Workers are not supported');
 
-    const workers = new Array(amount).fill(null).map(_ => new this.Worker!(path.join(__dirname, './worker.js'), {
+    const workers = new Array(amount).fill(null).map(_ => new this.worker!(path.join(__dirname, './worker.js'), {
       workerData: {
         decoratedFile,
         serviceName,
@@ -49,7 +49,7 @@ class WorkerManager {
 
   private static getWorkerThreads() {
     try {
-      return require('worker-threads-promise') as new (...args: any[]) => Worker;
+      return require('worker-threads-promise') as new (...args: unknown[]) => Worker;
     } catch (e) {
       return null;
     }

@@ -13,17 +13,17 @@ import {
   post,
   put,
   render
-} from "../src/decorators";
+} from "../decorators";
 import * as sinon from "sinon";
-import {IOC} from "../src/ioc";
+import {IOC} from "../ioc";
 import * as faker from "faker";
-import {META_TYPES, SERVICE_TYPE} from "../src/enums";
-import {ApiHandler} from "../src/types";
+import {META_TYPES, SERVICE_TYPE} from "../enums";
+import {ApiHandler} from "../types";
 
 
 const sandbox = sinon.createSandbox();
 
-let IOCMock: sinon.SinonMock;
+let iocMock: sinon.SinonMock;
 
 describe('[decorators.ts]', () => {
   afterEach(() => {
@@ -31,7 +31,7 @@ describe('[decorators.ts]', () => {
   });
 
   beforeEach(() => {
-    IOCMock = sandbox.mock(IOC);
+    iocMock = sandbox.mock(IOC);
   });
 
   const createClass = () => class Main {
@@ -40,7 +40,7 @@ describe('[decorators.ts]', () => {
   it('should mark class as injectable and register to IOC', () => {
     // Arrange
     const ctor = createClass();
-    IOCMock.expects('register').withExactArgs(ctor).once();
+    iocMock.expects('register').withExactArgs(ctor).once();
 
     // Act
     injectable(ctor);

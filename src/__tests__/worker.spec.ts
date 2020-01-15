@@ -1,8 +1,8 @@
 import * as sinon from "sinon";
 import * as faker from "faker";
 import {expect} from "chai";
-import {WorkerThread} from "../src/worker";
-import {IOC} from "../src/ioc";
+import {WorkerThread} from "../worker";
+import {IOC} from "../ioc";
 
 const sandbox = sinon.createSandbox();
 let workerThread: WorkerThread;

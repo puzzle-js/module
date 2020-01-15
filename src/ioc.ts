@@ -1,21 +1,21 @@
 import "reflect-metadata"
-import {constructor} from "./types";
+import {Constructor} from "./types";
 
 class IOC {
   static IOC_REGISTRIES: Map<string, {
-    ctor: constructor,
-    instance?: any
+    ctor: Constructor,
+    instance?: unknown
   }> = new Map();
 
-  static get<T>(ctor: constructor): T {
-    const ioc_registry = this.IOC_REGISTRIES.get(ctor.name);
+  static get<T>(ctor: Constructor): T {
+    const iocRegistry = this.IOC_REGISTRIES.get(ctor.name);
 
-    if (!ioc_registry) {
+    if (!iocRegistry) {
       throw new Error(`${ctor.name} is not marked as injectable`);
     }
 
-    if (ioc_registry.instance) {
-      return ioc_registry.instance;
+    if (iocRegistry.instance) {
+      return iocRegistry.instance as T;
     }
 
     const injections = this.getInjections(ctor) || [];
@@ -28,14 +28,14 @@ class IOC {
     const instance = new ctor(...injectionInstances);
 
 
-    ioc_registry.instance = instance;
-    this.IOC_REGISTRIES.set(ctor.name, ioc_registry);
+    iocRegistry.instance = instance;
+    this.IOC_REGISTRIES.set(ctor.name, iocRegistry);
 
 
-    return instance;
+    return instance as T;
   }
 
-  static register(ctor: constructor) {
+  static register(ctor: Constructor) {
     this.IOC_REGISTRIES.set(ctor.name, {
       ctor
     });
@@ -45,7 +45,7 @@ class IOC {
     this.IOC_REGISTRIES.clear();
   }
 
-  private static getInjections(ctor: constructor): constructor[] {
+  private static getInjections(ctor: Constructor): Constructor[] {
     return Reflect.getMetadata('design:paramtypes', ctor);
   }
 }

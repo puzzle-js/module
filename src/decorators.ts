@@ -1,7 +1,7 @@
 import "reflect-metadata";
 import {
   ApiHandler,
-  constructor,
+  Constructor,
   DataOptions,
   EndpointOptions,
   HTTP_METHODS,
@@ -18,7 +18,7 @@ import fastJsonStringify from "fast-json-stringify";
  * @param configuration
  */
 function module(configuration: ModuleConfiguration) {
-  return <T extends { new(...args: any[]): {} }>(constructor: T) => {
+  return <T extends { new(...args: unknown[]): {} }>(constructor: T) => {
     Reflect.defineMetadata(META_TYPES.TYPE, SERVICE_TYPE.MODULE, constructor);
     Reflect.defineMetadata(META_TYPES.CONFIGURATION, configuration, constructor);
   }
@@ -28,7 +28,8 @@ function module(configuration: ModuleConfiguration) {
  * @description Makes class injectable
  * @param constructor
  */
-function injectable<T extends { new(...args: any[]): {} }>(constructor: T) {
+// tslint:disable-next-line:no-any
+function injectable<T extends Constructor>(constructor: T) {
   Reflect.defineMetadata(META_TYPES.TYPE, SERVICE_TYPE.INJECTABLE, constructor);
   IOC.register(constructor);
 }
@@ -40,7 +41,7 @@ function injectable<T extends { new(...args: any[]): {} }>(constructor: T) {
 function api(path: string) {
   if (!path) throw new Error('Api path must be provided');
 
-  return <T extends { new(...args: any[]): {} }>(constructor: T) => {
+  return <T extends { new(...args: unknown[]): {} }>(constructor: T) => {
     Reflect.defineMetadata(META_TYPES.TYPE, SERVICE_TYPE.API, constructor);
     Reflect.defineMetadata(META_TYPES.PATH, path, constructor);
 
@@ -53,7 +54,7 @@ function api(path: string) {
  * @param dataOptions
  */
 function data(dataOptions?: DataOptions) {
-  return <T extends { new(...args: any[]): {} }>(constructor: T) => {
+  return <T extends { new(...args: unknown[]): {} }>(constructor: T) => {
     Reflect.defineMetadata(META_TYPES.TYPE, SERVICE_TYPE.DATA_PROVIDER, constructor);
     Reflect.defineMetadata(META_TYPES.CONFIGURATION, dataOptions || {}, constructor);
     Reflect.defineMetadata(META_TYPES.FILE_PATH, getDecoratedFile(), constructor);
@@ -69,7 +70,7 @@ function data(dataOptions?: DataOptions) {
  * @param renderOptions
  */
 function render(renderOptions?: RenderOptions) {
-  return <T extends { new(...args: any[]): {} }>(constructor: T) => {
+  return <T extends { new(...args: unknown[]): {} }>(constructor: T) => {
     Reflect.defineMetadata(META_TYPES.TYPE, SERVICE_TYPE.RENDER_ENGINE, constructor);
     Reflect.defineMetadata(META_TYPES.CONFIGURATION, renderOptions || {}, constructor);
     Reflect.defineMetadata(META_TYPES.FILE_PATH, getDecoratedFile(), constructor);
@@ -83,7 +84,7 @@ function render(renderOptions?: RenderOptions) {
 /**
  * Sets error handler for fragments
  */
-function error(target: any, propertyKey: string) {
+function error(target: {}, propertyKey: string) {
   Reflect.defineMetadata(META_TYPES.ERROR_HANDLER, propertyKey, target.constructor);
 }
 
@@ -92,7 +93,8 @@ function error(target: any, propertyKey: string) {
  * @param partials
  */
 function partials(partials: string[]) {
-  return function (target: any, propertyKey: string) {
+  return (target: object, propertyKey: string) => {
+    console.log(propertyKey);
     Reflect.defineMetadata(META_TYPES.RENDER_PARTIALS, partials, target.constructor);
 
   };
@@ -103,7 +105,7 @@ function partials(partials: string[]) {
  * @param target
  * @param propertyKey
  */
-function handler(target: any, propertyKey: string) {
+function handler(target: object, propertyKey: string) {
   Reflect.defineMetadata(META_TYPES.HANDLER, propertyKey, target.constructor);
 }
 
@@ -116,7 +118,7 @@ function handler(target: any, propertyKey: string) {
 function get(path: string, options?: EndpointOptions) {
   if (!path) throw new Error('Get path must be provided');
 
-  return function (target: any, propertyKey: string) {
+  return (target: object, propertyKey: string) => {
     addRouteType(target.constructor, path, propertyKey, 'get', options);
   };
 }
@@ -129,7 +131,7 @@ function get(path: string, options?: EndpointOptions) {
 function put(path: string, options?: EndpointOptions) {
   if (!path) throw new Error('Put path must be provided');
 
-  return function (target: any, propertyKey: string) {
+  return (target: object, propertyKey: string) => {
     addRouteType(target.constructor, path, propertyKey, 'put', options);
   };
 }
@@ -142,7 +144,7 @@ function put(path: string, options?: EndpointOptions) {
 function del(path: string, options?: EndpointOptions) {
   if (!path) throw new Error('Del path must be provided');
 
-  return function (target: any, propertyKey: string) {
+  return (target: object, propertyKey: string) => {
     addRouteType(target.constructor, path, propertyKey, 'delete', options);
   };
 }
@@ -155,7 +157,7 @@ function del(path: string, options?: EndpointOptions) {
 function post(path: string, options?: EndpointOptions) {
   if (!path) throw new Error('Post path must be provided');
 
-  return function (target: any, propertyKey: string) {
+  return (target: object, propertyKey: string) => {
     addRouteType(target.constructor, path, propertyKey, 'post', options);
   };
 }
@@ -166,7 +168,7 @@ function post(path: string, options?: EndpointOptions) {
  * @param type
  * @param error
  */
-const assertType = (target: any, type: SERVICE_TYPE, error?: string) => {
+const assertType = (target: object, type: SERVICE_TYPE, error?: string) => {
   const attachedType = Reflect.getMetadata(META_TYPES.TYPE, target);
   if (attachedType !== type) {
     throw new Error(error || `Unexpected type ${attachedType} received, expected it to be ${type}`);
@@ -174,7 +176,7 @@ const assertType = (target: any, type: SERVICE_TYPE, error?: string) => {
 };
 
 
-const addRouteType = (target: constructor, path: string, handler: string, method: HTTP_METHODS, options?: EndpointOptions) => {
+const addRouteType = (target: object, path: string, handler: string, method: HTTP_METHODS, options?: EndpointOptions) => {
   const handlers = Reflect.getMetadata(META_TYPES.API_HANDLERS, target) as ApiHandler[] || [];
 
   const handlerMeta = {

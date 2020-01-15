@@ -12,13 +12,13 @@ import {
   partials,
   error,
   render
-} from "../src/decorators";
-import {Module} from "../src/module";
+} from "../decorators";
+import {Module} from "../module";
 
 describe('[index.ts]', () => {
   it('should export lib contents', () => {
     // Act
-    const exports = require('../src');
+    const exports = require('../index');
 
 
     // Assert

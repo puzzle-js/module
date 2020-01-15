@@ -1,14 +1,15 @@
 import {Schema} from "fast-json-stringify";
 
-type constructor = new(...args: any[]) => any;
+// tslint:disable-next-line:no-any
+type Constructor = new(...args: any[]) => unknown;
 
 type HTTP_METHODS = 'get' | 'post' | 'delete' | 'put';
 
-type Stringifier = (doc: object | any[] | string | number | boolean | null) => string;
+type Stringifier = (doc: object | unknown[] | string | number | boolean | null) => string;
 
 interface ModuleConfiguration {
   name: string;
-  bootstrap: Array<constructor>;
+  bootstrap: Constructor[];
 }
 
 interface ApiHandler {
@@ -28,7 +29,7 @@ interface RenderOptions extends WorkerOptions {
 
 type ParsableParams = 'string' | 'number' | 'boolean' | ParsableParamsObject;
 
-type ParsableParamsObject =  {
+interface ParsableParamsObject {
   [x: string]: ParsableParams;
 }
 
@@ -49,10 +50,11 @@ interface DataResponse {
   $status?: number;
 }
 
-type RenderResponse = {
+interface RenderResponse {
   [key: string]: string | number;
+
   main: string;
-};
+}
 
 interface EndpointOptions {
   schema?: Schema;
@@ -65,13 +67,40 @@ interface WorkerProps {
   errorHandler: string
 }
 
+type JSONPrimitive = string | number | boolean | null;
+type JSONValue = JSONPrimitive | JSONObject | JSONArray;
+
+interface JSONObject {
+  [member: string]: JSONValue
+}
+
+interface JSONArray extends Array<JSONValue> {
+
+}
+
+interface Procedure {
+  action: 'api' | 'fragment';
+  params: Record<string, JSONValue | JSONObject | JSONArray>;
+  version: string;
+}
+
+interface ProcedureResponse {
+
+}
+
+interface Adaptor {
+  init(): Promise<void>;
+
+  register(cb: (command: Procedure, responder: (response: ProcedureResponse) => void) => void): void
+}
+
 
 export {
   WorkerProps,
   DataOptions,
   Stringifier,
   EndpointOptions,
-  constructor,
+  Constructor,
   ApiHandler,
   DataRequest,
   DataResponse,
@@ -80,5 +109,9 @@ export {
   RenderOptions,
   ModuleConfiguration,
   ParsableParamsObject,
-  ParsableParams
+  ParsableParams,
+  JSONPrimitive,
+  JSONArray,
+  JSONObject,
+  JSONValue
 }

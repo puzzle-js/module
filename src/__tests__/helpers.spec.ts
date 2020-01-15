@@ -1,7 +1,8 @@
 import {expect} from "chai";
-import {detectDevelopmentMode, getDecoratedFile} from "../src/helpers";
+import {detectDevelopmentMode, getDecoratedFile} from "../helpers";
 import * as path from "path";
 import * as sinon from "sinon";
+
 
 const sandbox = sinon.createSandbox();
 
@@ -22,7 +23,7 @@ describe('[helpers.ts]', () => {
     // Arrange
     const parent = {
       parent: {
-        id: path.join(__dirname, '../src', 'index.js'),
+        id: path.join(__dirname, '../', 'index.js'),
         parent: {
           id: '.'
         }

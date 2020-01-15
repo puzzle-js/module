@@ -1,7 +1,8 @@
+/* tslint:disable */
 import "reflect-metadata";
 import {assertType} from "./decorators";
 import {API_PREFIX, DEVELOPMENT_PORT, META_TYPES, SERVICE_TYPE} from "./enums";
-import {ApiHandler, constructor, ModuleConfiguration, Stringifier} from "./types";
+import {ApiHandler, Constructor, JSONObject, JSONValue, ModuleConfiguration, Stringifier} from "./types";
 import path from "path";
 import {IOC} from "./ioc";
 import {Fragment} from "./fragment";
@@ -16,14 +17,14 @@ class Module {
   private developmentModeEnabled = detectDevelopmentMode();
 
   constructor(
-    router: Router
+    router: Router = new Router()
   ) {
     this.developmentMode();
 
     this.router = router;
   }
 
-  public async init() {
+  async init() {
     assertType(this.constructor, SERVICE_TYPE.MODULE);
 
     await this.onBeforeInit();
@@ -35,7 +36,7 @@ class Module {
     this.connectConfiguration();
   }
 
-  public getConfiguration() {
+  getConfiguration() {
     return {
       params: this.fragment.params
     };
@@ -52,7 +53,7 @@ class Module {
       this
         .init()
         .then(() => {
-          const server = new Server(this.router.lookup.bind(this.router), {port: process.env.PORT ? +process.env.PORT : DEVELOPMENT_PORT});
+          const server = new Server(this.router.lookup, {port: process.env.PORT ? +process.env.PORT : DEVELOPMENT_PORT});
           console.log(this.router.prettyPrint());
           server.listen(() => {
             console.log(`Server started listening on port ${DEVELOPMENT_PORT}`);
@@ -61,7 +62,7 @@ class Module {
     }
   }
 
-  private registerModules(service: constructor) {
+  private registerModules(service: Constructor) {
     const type = Reflect.getMetadata(META_TYPES.TYPE, service);
 
     switch (type) {
@@ -72,10 +73,12 @@ class Module {
       case SERVICE_TYPE.RENDER_ENGINE:
         this.connectFragmentService(service, type);
         break;
+      default:
+        throw new Error('Unexpected module type');
     }
   }
 
-  private connectApi(service: constructor) {
+  private connectApi(service: Constructor) {
     const handlers = Reflect.getMetadata(META_TYPES.API_HANDLERS, service) as ApiHandler[];
     const pathPrefix = Reflect.getMetadata(META_TYPES.PATH, service);
 
@@ -87,7 +90,7 @@ class Module {
   };
 
   private handleApiResponse(instance: any, handlerMeta: ApiHandler, request: any, response: any) {
-    let data = instance[handlerMeta.handler](request);
+    const data = instance[handlerMeta.handler](request);
 
     if (typeof data.then === 'function') {
       data.then((resolved: any) => {
@@ -98,15 +101,15 @@ class Module {
     }
   }
 
-  private mapResponseToHTTP(data: any, stringifier?: Stringifier) {
+  private mapResponseToHTTP(data: JSONObject | JSONValue, stringifier?: Stringifier) {
     if (typeof data === 'object') {
       return stringifier ? stringifier(data) : JSON.stringify(data);
     } else {
-      data.toString();
+      return data.toString();
     }
   }
 
-  private connectFragmentService(service: constructor, type: SERVICE_TYPE) {
+  private connectFragmentService(service: Constructor, type: SERVICE_TYPE) {
     let fragment = this.fragment;
     if (!fragment) fragment = new Fragment();
 

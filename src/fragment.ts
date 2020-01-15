@@ -1,4 +1,14 @@
-import {constructor, DataOptions, DataRequest, DataResponse, ParsableParamsObject, RenderResponse} from "./types";
+/* tslint:disable */
+
+import {
+  Constructor,
+  DataOptions,
+  DataRequest,
+  DataResponse,
+  JSONObject,
+  ParsableParamsObject,
+  RenderResponse
+} from "./types";
 import {DEFAULT_RENDER_WORKER_COUNT, META_TYPES, RENDER_TYPES, SERVICE_TYPE} from "./enums";
 import {IOC} from "./ioc";
 import {WorkerManager} from "./worker-manager";
@@ -6,14 +16,14 @@ import fastJsonStringifier from "fast-json-stringify";
 
 
 class Fragment {
-  public params!: ParsableParamsObject;
+  params!: ParsableParamsObject;
 
-  private workerSupported: boolean = false;
+  private workerSupported = false;
   private dataHandler!: (req: DataRequest) => DataResponse | Promise<DataResponse>;
   private renderHandler!: (data: DataResponse) => RenderResponse | Promise<RenderResponse>;
   private dataErrorHandler?: (req: DataRequest) => DataResponse | Promise<DataResponse>;
   private renderErrorHandler?: (data: DataResponse) => RenderResponse | Promise<RenderResponse>;
-  private stringifier!: (data: any) => string;
+  private stringifier!: (doc: JSONObject) => string;
 
   constructor() {
     this.render = this.render.bind(this);
@@ -41,7 +51,7 @@ class Fragment {
    * Sets data service for the fragment
    * @param service
    */
-  setService(service: constructor) {
+  setService(service: Constructor) {
     const handler = Reflect.getMetadata(META_TYPES.HANDLER, service) as string;
     const type = Reflect.getMetadata(META_TYPES.TYPE, service) as SERVICE_TYPE;
     const configuration = Reflect.getMetadata(META_TYPES.CONFIGURATION, service) as DataOptions;
@@ -59,6 +69,7 @@ class Fragment {
       this.workerSupported = true;
       const decoratedFile = Reflect.getMetadata(META_TYPES.FILE_PATH, service) as string;
       const workerGroup = WorkerManager.createWorkerGroup(decoratedFile, handler, service.name, configuration.workers || DEFAULT_RENDER_WORKER_COUNT, errorHandler);
+      // tslint:disable-next-line:no-any
       this[handlerName] = (request: DataRequest | DataResponse) => workerGroup.distribute<any>({
         type: RENDER_TYPES.HANDLER,
         data: request
@@ -135,10 +146,10 @@ class Fragment {
 
       res.end(this.stringifier({
         ...renderResponse,
-        $status: dataResponse.$status
+        $status: dataResponse.$status as any
       }));
     } else {
-      res.end(this.stringifier(dataResponse));
+      res.end(this.stringifier(dataResponse as any));
     }
   }
 

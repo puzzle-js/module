@@ -7,5 +7,8 @@ module.exports = {
   ],
   "setupFiles": [
      "./jest-setup.js"
-   ]
+   ],
+  "testMatch": [
+    "**/src/__tests__/*.spec.ts"
+  ]
 };

@@ -3,7 +3,7 @@ import * as faker from "faker";
 // @ts-ignore
 import http from "http";
 import {expect} from "chai";
-import {Server} from "../src/server";
+import {Server} from "../server";
 
 const sandbox = sinon.createSandbox();
 let server: Server;

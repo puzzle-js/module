@@ -1,4 +1,5 @@
 import _Router, {Handler, HTTPVersion} from "find-my-way";
+import {IncomingMessage, ServerResponse} from "http";
 
 
 class Router {
@@ -26,8 +27,8 @@ class Router {
     this.httpRouter.delete(path, handler);
   }
 
-  lookup() {
-
+  lookup(req: IncomingMessage, res: ServerResponse) {
+    this.httpRouter.lookup(req, res);
   }
 
   prettyPrint() {

@@ -1,7 +1,7 @@
 import * as sinon from "sinon";
 import * as faker from "faker";
 import {expect} from "chai";
-import {WorkerManager} from "../src/worker-manager";
+import {WorkerManager} from "../worker-manager";
 
 const sandbox = sinon.createSandbox();
 let workerManager: WorkerManager;

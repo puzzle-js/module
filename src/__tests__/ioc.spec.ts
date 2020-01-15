@@ -1,7 +1,7 @@
 import * as sinon from "sinon";
 import {expect} from "chai";
-import {IOC} from "../src/ioc";
-import {injectable} from "../src/decorators";
+import {IOC} from "../ioc";
+import {injectable} from "../decorators";
 
 const sandbox = sinon.createSandbox();
 let ioc: IOC;
