@@ -1,80 +1,108 @@
 import * as sinon from "sinon";
 import * as faker from "faker";
-// @ts-ignore
-import http from "http";
 import {expect} from "chai";
-import {Server} from "../server";
+import {HttpServer} from "../adaptors/http-server";
+import http from "http";
+import {DEVELOPMENT_PORT} from "../enums";
 
 const sandbox = sinon.createSandbox();
-let server: Server;
+let server: HttpServer;
 
-describe('[instance.ts]', () => {
+describe('[httpServer.ts]', () => {
+  beforeEach(() => {
+    server = new HttpServer()
+  });
+
   afterEach(() => {
     sandbox.verifyAndRestore();
   });
 
-  it('should create new Server', () => {
+  it('should create new HttpServer', () => {
     // Arrange
-    const handler = sandbox.spy();
-    const server = new Server(handler);
+    const server = new HttpServer();
 
     // Assert
-    expect(server).to.be.instanceOf(Server);
+    expect(server).to.be.instanceOf(HttpServer);
   });
 
-  it('should create a http instance with default options', () => {
+  it('should create with custom options', () => {
     // Arrange
-    const handler = sandbox.spy() as any;
-    const stub = sandbox.stub(http, 'createServer');
+    const options = {
+      port: faker.random.number()
+    };
+    const handler = sandbox.stub();
+    const instance = {
+      listen: sandbox.stub()
+    };
+    const createServerStub = sandbox.stub(http, 'createServer').returns(instance as any);
+    const server = new HttpServer(options);
 
     // Act
-    new Server(handler);
+    server.listen(handler);
 
     // Assert
-    expect(stub.calledWithExactly(handler)).to.eq(true);
+    expect(createServerStub.calledWithExactly(handler as any)).to.eq(true);
+    expect(instance.listen.calledWithExactly(options.port, undefined)).to.eq(true);
   });
 
-  it('should start listening on provided port', () => {
+  it('should create with default port', () => {
     // Arrange
-    const handler = sandbox.spy();
-    const server = new Server(handler);
-    const stub = sandbox.stub(server.instance, 'listen');
+    const handler = sandbox.stub();
+    const instance = {
+      listen: sandbox.stub()
+    };
+    const createServerStub = sandbox.stub(http, 'createServer').returns(instance as any);
+    const server = new HttpServer();
 
     // Act
-    server.listen();
+    server.listen(handler);
 
     // Assert
-    expect(stub.calledWithExactly(8000, undefined)).to.eq(true);
+    expect(createServerStub.calledWithExactly(handler as any)).to.eq(true);
+    expect(instance.listen.calledWithExactly(DEVELOPMENT_PORT, undefined)).to.eq(true);
   });
 
-  it('should start listening on provided port and callback', () => {
+
+  it('should create with environment port', () => {
     // Arrange
-    const handler = sandbox.spy();
-    const cb = sandbox.stub();
-    const server = new Server(handler);
-    const stub = sandbox.stub(server.instance, 'listen');
+    const handler = sandbox.stub();
+    const instance = {
+      listen: sandbox.stub()
+    };
+    const port = faker.random.number();
+
+    const createServerStub = sandbox.stub(http, 'createServer').returns(instance as any);
+
 
     // Act
-    server.listen(cb);
+    process.env.PORT = port.toString();
+    const server = new HttpServer();
+    delete process.env.PORT;
+    server.listen(handler);
 
     // Assert
-    expect(stub.calledWithExactly(8000, cb)).to.eq(true);
+    expect(createServerStub.calledWithExactly(handler as any)).to.eq(true);
+    expect(instance.listen.calledWithExactly(port, undefined)).to.eq(true);
   });
 
-  it('should start listening on provided port, callback and hostname', () => {
+  it('should create with custom options with hostname', () => {
     // Arrange
-    const handler = sandbox.spy();
-    const cb = sandbox.stub();
-    const hostname = faker.random.word();
-    const server = new Server(handler, {
-      hostname
-    });
-    const stub = sandbox.stub(server.instance as any, 'listen');
+    const options = {
+      port: faker.random.number(),
+      hostname: faker.random.word()
+    };
+    const handler = sandbox.stub();
+    const instance = {
+      listen: sandbox.stub()
+    };
+    const createServerStub = sandbox.stub(http, 'createServer').returns(instance as any);
+    const server = new HttpServer(options);
 
     // Act
-    server.listen(cb);
+    server.listen(handler);
 
     // Assert
-    expect(stub.calledWithExactly(8000, hostname, cb)).to.eq(true);
+    expect(createServerStub.calledWithExactly(handler as any)).to.eq(true);
+    expect(instance.listen.calledWithExactly(options.port, options.hostname, undefined)).to.eq(true);
   });
 });

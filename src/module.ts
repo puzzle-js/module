@@ -1,27 +1,31 @@
 /* tslint:disable */
 import "reflect-metadata";
 import {assertType} from "./decorators";
-import {API_PREFIX, DEVELOPMENT_PORT, META_TYPES, SERVICE_TYPE} from "./enums";
-import {ApiHandler, Constructor, JSONObject, JSONValue, ModuleConfiguration, Stringifier} from "./types";
-import path from "path";
+import {META_TYPES, SERVICE_TYPE} from "./enums";
+import {Adaptor, ApiHandler, Constructor, JSONObject, JSONValue, ModuleConfiguration, Stringifier} from "./types";
 import {IOC} from "./ioc";
 import {Fragment} from "./fragment";
 import {detectDevelopmentMode} from "./helpers";
-import {Server} from "./server";
-import {Router} from "./router";
-
+import {HttpAdaptor} from "./adaptors/http-adaptor";
+import {HttpServer} from "./adaptors/http-server";
+import {HttpRouter} from "./adaptors/http-router";
 
 class Module {
   private fragment!: Fragment;
-  private router: Router;
   private developmentModeEnabled = detectDevelopmentMode();
+  private adaptors: Adaptor[];
 
-  constructor(
-    router: Router = new Router()
-  ) {
-    this.developmentMode();
+  constructor(adaptors: Adaptor[]) {
+    this.adaptors = adaptors;
+  }
 
-    this.router = router;
+  static run(moduleCtor: Constructor<Module>) {
+    const httpServer = new HttpServer();
+    const httpRouter = new HttpRouter();
+    const httpAdaptor = new HttpAdaptor(httpServer, httpRouter);
+    const module = new moduleCtor([httpAdaptor]);
+
+    module.init();
   }
 
   async init() {
@@ -34,6 +38,13 @@ class Module {
 
     this.connectFragmentToRouter();
     this.connectConfiguration();
+
+    for (let i = 0, len = this.adaptors.length; i < len; i++) {
+      await this.adaptors[i].init((params) => {
+        console.log(params);
+      });
+      await this.adaptors[i].start();
+    }
   }
 
   getConfiguration() {
@@ -53,11 +64,11 @@ class Module {
       this
         .init()
         .then(() => {
-          const server = new Server(this.router.lookup, {port: process.env.PORT ? +process.env.PORT : DEVELOPMENT_PORT});
-          console.log(this.router.prettyPrint());
-          server.listen(() => {
-            console.log(`Server started listening on port ${DEVELOPMENT_PORT}`);
-          });
+          // const server = new HttpServer(this.router.lookup, {port: process.env.PORT ? +process.env.PORT : DEVELOPMENT_PORT});
+          // console.log(this.router.prettyPrint());
+          // server.listen(() => {
+          //   console.log(`HttpServer started listening on port ${DEVELOPMENT_PORT}`);
+          // });
         });
     }
   }
@@ -85,7 +96,7 @@ class Module {
     const apiInstance = IOC.get(service) as any;
 
     handlers.forEach(apiHandler => {
-      this.router[apiHandler.method](path.join(API_PREFIX, pathPrefix, apiHandler.path), this.handleApiResponse.bind(this, apiInstance, apiHandler));
+      // this.router[apiHandler.method](path.join(API_PREFIX, pathPrefix, apiHandler.path), this.handleApiResponse.bind(this, apiInstance, apiHandler));
     });
   };
 
@@ -124,23 +135,23 @@ class Module {
 
   private connectFragmentToRouter() {
     this.fragment.validate();
-    this.router.post('/fragment', (req, res) => {
-      if (req.headers.version !== '2') {
-        res.statusCode = 422;
-        res.setHeader('content-type', 'application/json');
-        res.setHeader('version', '2');
-        res.end(JSON.stringify(this.getConfiguration()));
-      } else {
-        res.setHeader('content-type', 'application/json');
-        this.fragment.render(req, res);
-      }
-    });
+    // this.router.post('/fragment', (req, res) => {
+    //   if (req.headers.version !== '2') {
+    //     res.statusCode = 422;
+    //     res.setHeader('content-type', 'application/json');
+    //     res.setHeader('version', '2');
+    //     res.end(JSON.stringify(this.getConfiguration()));
+    //   } else {
+    //     res.setHeader('content-type', 'application/json');
+    //     this.fragment.render(req, res);
+    //   }
+    // });
   }
 
   private connectConfiguration() {
-    this.router.get('/__/configuration', (req, res) => {
-      res.end(JSON.stringify(this.getConfiguration()));
-    });
+    // this.router.get('/__/configuration', (req, res) => {
+    //   res.end(JSON.stringify(this.getConfiguration()));
+    // });
   }
 }
 

@@ -1,7 +1,7 @@
 import {Schema} from "fast-json-stringify";
 
 // tslint:disable-next-line:no-any
-type Constructor = new(...args: any[]) => unknown;
+type Constructor<T = unknown> = new(...args: any[]) => T;
 
 type HTTP_METHODS = 'get' | 'post' | 'delete' | 'put';
 
@@ -88,10 +88,11 @@ interface ProcedureResponse {
 
 }
 
-interface Adaptor {
-  init(): Promise<void>;
+type ProcedureCallback = (command: Procedure, responder: (response: ProcedureResponse) => void) => void;
 
-  register(cb: (command: Procedure, responder: (response: ProcedureResponse) => void) => void): void
+interface Adaptor {
+  init(cb: ProcedureCallback): Promise<void>;
+  start(): Promise<void>;
 }
 
 
@@ -113,5 +114,9 @@ export {
   JSONPrimitive,
   JSONArray,
   JSONObject,
-  JSONValue
+  JSONValue,
+  Adaptor,
+  Procedure,
+  ProcedureResponse,
+  ProcedureCallback
 }

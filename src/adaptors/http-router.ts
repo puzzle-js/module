@@ -2,7 +2,7 @@ import _Router, {Handler, HTTPVersion} from "find-my-way";
 import {IncomingMessage, ServerResponse} from "http";
 
 
-class Router {
+class HttpRouter {
   private httpRouter = _Router({
     ignoreTrailingSlash: true
   });
@@ -38,5 +38,5 @@ class Router {
 
 
 export {
-  Router
+  HttpRouter
 }
