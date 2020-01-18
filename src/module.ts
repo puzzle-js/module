@@ -2,13 +2,22 @@
 import "reflect-metadata";
 import {assertType} from "./decorators";
 import {META_TYPES, SERVICE_TYPE} from "./enums";
-import {Adaptor, ApiHandler, Constructor, JSONObject, JSONValue, ModuleConfiguration, Stringifier} from "./types";
+import {
+  Adaptor,
+  ApiHandler,
+  Constructor,
+  JSONObject,
+  JSONValue,
+  ModuleConfiguration,
+  Procedure,
+  ProcedureResponse,
+  Stringifier
+} from "./types";
 import {IOC} from "./ioc";
 import {Fragment} from "./fragment";
 import {detectDevelopmentMode} from "./helpers";
 import {HttpAdaptor} from "./adaptors/http-adaptor";
-import {HttpServer} from "./adaptors/http-server";
-import {HttpRouter} from "./adaptors/http-router";
+import {FragmentProcedureResponseBuilder, ProcedureResponseBuilder} from "./procedure-response-builder";
 
 class Module {
   private fragment!: Fragment;
@@ -17,12 +26,12 @@ class Module {
 
   constructor(adaptors: Adaptor[]) {
     this.adaptors = adaptors;
+
+    this.adaptorCallback = this.adaptorCallback.bind(this);
   }
 
   static run(moduleCtor: Constructor<Module>) {
-    const httpServer = new HttpServer();
-    const httpRouter = new HttpRouter();
-    const httpAdaptor = new HttpAdaptor(httpServer, httpRouter);
+    const httpAdaptor = new HttpAdaptor();
     const module = new moduleCtor([httpAdaptor]);
 
     module.init();
@@ -39,12 +48,24 @@ class Module {
     this.connectFragmentToRouter();
     this.connectConfiguration();
 
-    for (let i = 0, len = this.adaptors.length; i < len; i++) {
-      await this.adaptors[i].init((params) => {
-        console.log(params);
-      });
-      await this.adaptors[i].start();
+    for (let adaptor of this.adaptors) {
+      await adaptor.init(this.adaptorCallback);
+      await adaptor.start();
     }
+  }
+
+  private adaptorCallback(procedure: Procedure, cb: (procedureResponse: ProcedureResponse) => void) {
+    const response = ProcedureResponseBuilder.create(procedure.action, cb) as FragmentProcedureResponseBuilder;
+
+    if(procedure.version !== '3'){
+      return response.upgradeVersion({test: 55, a: 63, hash: 3});
+    }
+
+    response
+      .header('test', 'true')
+      .partial('tt', '4434')
+      .status(204)
+      .done();
   }
 
   getConfiguration() {

@@ -1,4 +1,5 @@
 import {Schema} from "fast-json-stringify";
+import {ProcedureActionType} from "./enums";
 
 // tslint:disable-next-line:no-any
 type Constructor<T = unknown> = new(...args: any[]) => T;
@@ -79,19 +80,27 @@ interface JSONArray extends Array<JSONValue> {
 }
 
 interface Procedure {
-  action: 'api' | 'fragment';
+  action: ProcedureActionType;
+  command: string;
   params: Record<string, JSONValue | JSONObject | JSONArray>;
   version: string;
 }
 
 interface ProcedureResponse {
-
+  meta: {
+    statusCode: number,
+    headers: Record<string, string>
+  },
+  data?: JSONValue;
+  html?: JSONObject;
+  __upgrade__version?: JSONObject;
 }
 
-type ProcedureCallback = (command: Procedure, responder: (response: ProcedureResponse) => void) => void;
+type ProcedureCallback = (command: Procedure, responseHandler: (response: ProcedureResponse) => void) => Promise<void> | void;
 
 interface Adaptor {
   init(cb: ProcedureCallback): Promise<void>;
+
   start(): Promise<void>;
 }
 

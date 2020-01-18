@@ -1,42 +1,90 @@
-import {Adaptor, Procedure, ProcedureCallback} from "../types";
-import {HttpServer} from "./http-server";
-import {IncomingMessage, ServerResponse} from "http";
-import {HttpRouter} from "./http-router";
+import {
+  Adaptor,
+  Procedure,
+  ProcedureCallback,
+  ProcedureResponse,
+} from '../types';
+import fastify from 'fastify';
+import { DEVELOPMENT_PORT } from '../enums';
 
+const HTTP_SCHEMA = {
+  response: {
+    200: {
+      type: 'object',
+      properties: {
+        html: {
+          type: 'object',
+          patternProperties: {
+            '.*': {
+              type: 'string',
+            },
+          },
+        },
+        data: {
+          type: 'object',
+        },
+        __upgrade__version: {
+          type: 'object',
+          patternProperties: {
+            '.*': {
+              type: 'string',
+            },
+          },
+        },
+        headers: {
+          type: 'object',
+          patternProperties: {
+            '.*': {
+              type: 'string',
+            },
+          },
+        },
+        statusCode: {
+          type: 'number',
+        },
+      },
+    },
+  },
+  body: {
+    version: {
+      type: 'string',
+    },
+    action: {
+      type: 'string',
+    },
+    params: {
+      type: 'object',
+    },
+    command: {
+      type: 'string',
+    },
+  },
+};
 
 class HttpAdaptor implements Adaptor {
-  private server: HttpServer;
-  private router: HttpRouter;
+  server = fastify();
+  port: number;
   private procedureCallback!: ProcedureCallback;
 
+  constructor() {
+    this.port = process.env.PORT ? +process.env.PORT : DEVELOPMENT_PORT;
 
-  constructor(
-    server: HttpServer,
-    router: HttpRouter
-  ) {
-    this.server = server;
-    this.router = router;
-
-    this.handleIncomingRequest = this.handleIncomingRequest.bind(this);
+    this.registerPlugins();
+    this.registerRoute();
   }
 
-  handleIncomingRequest(req: IncomingMessage, res: ServerResponse) {
-    if (req.method === "POST") {
-      const data: Buffer[] = [];
-      req.on('data', chunk => {
-        data.push(chunk)
-      });
-      req.on('end', () => {
-        const a = JSON.parse(data.toString()) as Procedure;
-        this.procedureCallback(a, procedureResponse => {
-          console.log(procedureResponse);
-          res.end();
-        });
-      });
-    } else {
-      res.statusCode = 405;
-      res.end();
-    }
+  private registerPlugins() {
+    this.server.register(require('fastify-compress'));
+  }
+
+  // tslint:disable-next-line:no-any
+  httpToProcedure(request: fastify.FastifyRequest<any>): Procedure {
+    return {
+      action: request.body.action,
+      version: request.body.version,
+      params: request.body.params,
+      command: request.body.command,
+    };
   }
 
   async init(procedureCallback: ProcedureCallback) {
@@ -44,10 +92,27 @@ class HttpAdaptor implements Adaptor {
   }
 
   async start() {
-    this.server.listen(this.handleIncomingRequest);
+    // this.server.listen(this.incomingHttpRequestHandler);
+    this.server.listen(this.port);
+  }
+
+  private registerRoute() {
+    this.server.route({
+      method: 'POST',
+      url: '/',
+      schema: HTTP_SCHEMA,
+      handler: async (request, reply) => {
+        const procedure = this.httpToProcedure(request);
+
+        this.procedureCallback(
+          procedure,
+          (procedureResponse: ProcedureResponse) => {
+            reply.send(procedureResponse);
+          }
+        );
+      },
+    });
   }
 }
 
-export {
-  HttpAdaptor
-}
+export { HttpAdaptor };

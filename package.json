@@ -8,10 +8,10 @@
     "build": "tsc",
     "test": "jest --coverage",
     "test:watch": "jest --coverage --watchAll",
-    "check": "gts check",
-    "clean": "gts clean",
+    "check": "./node_modules/.bin/gts check",
+    "clean": "./node_modules/.bin/gts clean",
     "compile": "tsc -p .",
-    "fix": "gts fix",
+    "fix": "./node_modules/.bin/gts fix",
     "prepare": "npm run compile",
     "pretest": "npm run compile",
     "posttest": "npm run check"
@@ -20,12 +20,14 @@
   "license": "ISC",
   "dependencies": {
     "fast-json-stringify": "^1.15.5",
-    "find-my-way": "^2.1.2",
+    "fastify": "^2.11.0",
+    "fastify-compress": "^2.0.0",
     "reflect-metadata": "^0.1.13",
     "worker-threads-promise": "^1.0.1"
   },
   "devDependencies": {
     "@types/chai": "^4.2.3",
+    "@types/compression": "^1.0.1",
     "@types/faker": "^4.1.6",
     "@types/jest": "^24.0.18",
     "@types/node": "^10.0.3",

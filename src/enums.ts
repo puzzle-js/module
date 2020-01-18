@@ -24,6 +24,11 @@ enum RENDER_TYPES {
   ERROR
 }
 
+enum ProcedureActionType {
+  API = 'api',
+  FRAGMENT = 'fragment'
+}
+
 const DEFAULT_RENDER_WORKER_COUNT = 1;
 
 const API_PREFIX = '/api';
@@ -33,6 +38,7 @@ const DEVELOPMENT_PORT = 4444;
 const DEFAULT_CONTENT_TIMEOUT = 2000;
 
 export {
+  ProcedureActionType,
   DEFAULT_CONTENT_TIMEOUT,
   RENDER_TYPES,
   DEVELOPMENT_PORT,
