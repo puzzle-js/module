@@ -1,59 +1,80 @@
-import { JSONObject, JSONValue, ProcedureResponse } from './types';
-import { ProcedureActionType } from './enums';
+import {JSONObject, JSONValue, ProcedureResponse} from './types';
+import {ProcedureActionType} from './enums';
 
 class ProcedureResponseBuilder {
   protected doneCallback: (procedureResponse: ProcedureResponse) => void;
-  protected buildParams: ProcedureResponse = {
-    meta: {
-      statusCode: 200,
-      headers: {},
-    },
-  };
+  protected buildParams: ProcedureResponse = {};
 
   static create(
     type: ProcedureActionType,
     doneCallback: (procedureResponse: ProcedureResponse) => void
   ):
     | FragmentProcedureResponseBuilder
-    | ApiProcedureResponseBuilder
-    | ProcedureResponseBuilder {
+    | ApiProcedureResponseBuilder {
+
     if (type === ProcedureActionType.FRAGMENT) {
       return new FragmentProcedureResponseBuilder(doneCallback);
-    } else if (type === ProcedureActionType.API) {
+    } else {
       return new ApiProcedureResponseBuilder(doneCallback);
     }
-
-    return new ProcedureResponseBuilder(doneCallback);
   }
 
   constructor(doneCallback: (procedureResponse: ProcedureResponse) => void) {
     this.doneCallback = doneCallback;
   }
 
+  protected createFragmentConfig() {
+    return {
+      meta: {
+        statusCode: 200,
+        headers: {}
+      }
+    }
+  }
+
+  protected createApiConfig() {
+    return {
+      meta: {
+        headers: {},
+        statusCode: 200
+      }
+    }
+  }
+
   status(statusCode: number) {
-    this.buildParams.meta.statusCode = statusCode;
+    if (!this.buildParams.fragment) this.buildParams.fragment = this.createFragmentConfig();
+
+    this.buildParams.fragment.meta.statusCode = statusCode;
     return this;
   }
 
   header(name: string, value: string) {
-    this.buildParams.meta.headers[name] = value;
+    if (!this.buildParams.fragment) this.buildParams.fragment = this.createFragmentConfig();
+
+    this.buildParams.fragment.meta.headers[name] = value;
     return this;
   }
 
   headers(headerMap: Record<string, string>) {
-    this.buildParams.meta.headers = {
-      ...this.buildParams.meta.headers,
+    if (!this.buildParams.fragment) this.buildParams.fragment = this.createFragmentConfig();
+
+    this.buildParams.fragment.meta.headers = {
+      ...this.buildParams.fragment.meta.headers,
       ...headerMap,
     };
     return this;
   }
 
   redirect(status: 301 | 302, target: string) {
-    this.buildParams.meta.headers.location = target;
-    return this;
+    this.buildParams = {};
+    this.buildParams.fragment = this.createFragmentConfig();
+    this.buildParams.fragment.meta.statusCode = status;
+    this.buildParams.fragment.meta.headers.location = target;
+    this.done();
   }
 
   upgradeVersion(configuration: JSONObject) {
+    this.buildParams = {};
     this.buildParams.__upgrade__version = configuration;
     this.done();
   }
@@ -65,16 +86,18 @@ class ProcedureResponseBuilder {
 
 class ApiProcedureResponseBuilder extends ProcedureResponseBuilder {
   json(value: JSONValue) {
-    this.buildParams.data = value;
-    return this;
+    this.buildParams.api = this.createApiConfig();
+    this.buildParams.api.data = value;
+    this.done();
   }
 }
 
 class FragmentProcedureResponseBuilder extends ProcedureResponseBuilder {
   partial(name: string, html: string) {
-    this.buildParams.html = {
+    if (!this.buildParams.fragment) this.buildParams.fragment = this.createFragmentConfig();
+    this.buildParams.fragment.html = {
       [name]: html,
-      ...(this.buildParams.html || {}),
+      ...(this.buildParams.fragment.html || {}),
     };
     return this;
   }

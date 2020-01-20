@@ -87,12 +87,20 @@ interface Procedure {
 }
 
 interface ProcedureResponse {
-  meta: {
-    statusCode: number,
-    headers: Record<string, string>
-  },
-  data?: JSONValue;
-  html?: JSONObject;
+  fragment?: {
+    meta: {
+      statusCode: number,
+      headers: Record<string, string>
+    },
+    html?: JSONObject;
+  }
+  api?: {
+    data?: JSONValue,
+    meta: {
+      statusCode: number,
+      headers: Record<string, string>
+    }
+  }
   __upgrade__version?: JSONObject;
 }
 

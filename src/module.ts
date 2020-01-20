@@ -57,7 +57,7 @@ class Module {
   private adaptorCallback(procedure: Procedure, cb: (procedureResponse: ProcedureResponse) => void) {
     const response = ProcedureResponseBuilder.create(procedure.action, cb) as FragmentProcedureResponseBuilder;
 
-    if(procedure.version !== '3'){
+    if (procedure.version !== '3') {
       return response.upgradeVersion({test: 55, a: 63, hash: 3});
     }
 

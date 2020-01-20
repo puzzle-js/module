@@ -1,27 +1,67 @@
-import {
-  Adaptor,
-  Procedure,
-  ProcedureCallback,
-  ProcedureResponse,
-} from '../types';
+import {Adaptor, Procedure, ProcedureCallback, ProcedureResponse,} from '../types';
 import fastify from 'fastify';
-import { DEVELOPMENT_PORT } from '../enums';
+import {DEVELOPMENT_PORT} from '../enums';
 
 const HTTP_SCHEMA = {
   response: {
     200: {
       type: 'object',
       properties: {
-        html: {
+        fragment: {
           type: 'object',
-          patternProperties: {
-            '.*': {
-              type: 'string',
+          properties: {
+            html: {
+              type: 'object',
+              patternProperties: {
+                '.*': {
+                  type: 'string',
+                },
+              },
             },
-          },
+            data: {
+              type: 'object',
+            },
+            meta: {
+              type: 'object',
+              properties: {
+                headers: {
+                  type: 'object',
+                  patternProperties: {
+                    '.*': {
+                      type: 'string',
+                    },
+                  },
+                },
+                statusCode: {
+                  type: 'number',
+                }
+              }
+            },
+          }
         },
-        data: {
+        api: {
           type: 'object',
+          properties: {
+            data: {
+              type: 'object',
+            },
+            meta: {
+              type: 'object',
+              properties: {
+                headers: {
+                  type: 'object',
+                  patternProperties: {
+                    '.*': {
+                      type: 'string',
+                    },
+                  },
+                },
+                statusCode: {
+                  type: 'number',
+                }
+              }
+            }
+          }
         },
         __upgrade__version: {
           type: 'object',
@@ -30,18 +70,7 @@ const HTTP_SCHEMA = {
               type: 'string',
             },
           },
-        },
-        headers: {
-          type: 'object',
-          patternProperties: {
-            '.*': {
-              type: 'string',
-            },
-          },
-        },
-        statusCode: {
-          type: 'number',
-        },
+        }
       },
     },
   },
@@ -92,8 +121,7 @@ class HttpAdaptor implements Adaptor {
   }
 
   async start() {
-    // this.server.listen(this.incomingHttpRequestHandler);
-    this.server.listen(this.port);
+    await this.server.listen(this.port);
   }
 
   private registerRoute() {
@@ -103,7 +131,6 @@ class HttpAdaptor implements Adaptor {
       schema: HTTP_SCHEMA,
       handler: async (request, reply) => {
         const procedure = this.httpToProcedure(request);
-
         this.procedureCallback(
           procedure,
           (procedureResponse: ProcedureResponse) => {
@@ -115,4 +142,4 @@ class HttpAdaptor implements Adaptor {
   }
 }
 
-export { HttpAdaptor };
+export {HttpAdaptor};
