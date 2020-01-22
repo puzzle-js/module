@@ -34,8 +34,16 @@ interface ParsableParamsObject {
   [x: string]: ParsableParams;
 }
 
+type MapperTypes = 'query' | 'param' | 'body' | 'config' | 'header' | 'cookie';
+
+
+
 interface DataOptions extends WorkerOptions {
   params: ParsableParamsObject;
+  path: string;
+  mapper: {
+    [x: string]: MapperTypes | MapperTypes[];
+  }
 }
 
 interface DataRequest {

@@ -121,7 +121,11 @@ describe('[decorators.ts]', () => {
     const stub = sandbox.stub(IOC, 'register');
 
     // Act
-    @data()
+    @data({
+      path: '',
+      mapper: {},
+      params: {}
+    })
     class FragmentData {
       @handler
       handler() {

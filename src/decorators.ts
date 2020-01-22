@@ -53,13 +53,18 @@ function api(path: string) {
  * @description Sets class as data provider for fragment
  * @param dataOptions
  */
-function data(dataOptions?: DataOptions) {
+function data(dataOptions: DataOptions) {
   return <T extends { new(...args: unknown[]): {} }>(constructor: T) => {
     Reflect.defineMetadata(META_TYPES.TYPE, SERVICE_TYPE.DATA_PROVIDER, constructor);
     Reflect.defineMetadata(META_TYPES.CONFIGURATION, dataOptions || {}, constructor);
     Reflect.defineMetadata(META_TYPES.FILE_PATH, getDecoratedFile(), constructor);
 
+
     if (!Reflect.getMetadata(META_TYPES.HANDLER, constructor)) throw new Error(`@handler decorator not added to data service(${constructor.name}) handler method`);
+
+    if (JSON.stringify(Object.keys(dataOptions.mapper).sort()) !== JSON.stringify(Object.keys(dataOptions.params).sort())) {
+      throw new Error(`@data params and mapper is not matching for service(${constructor.name})`);
+    }
 
     IOC.register(constructor);
   }
@@ -105,8 +110,10 @@ function partials(partials: string[]) {
  * @param target
  * @param propertyKey
  */
-function handler(target: object, propertyKey: string) {
+function handler(target: object, propertyKey: string, descriptor: TypedPropertyDescriptor<any>) {
   Reflect.defineMetadata(META_TYPES.HANDLER, propertyKey, target.constructor);
+
+  console.log(descriptor.value.arg);
 }
 
 /**

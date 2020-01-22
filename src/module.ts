@@ -15,14 +15,12 @@ import {
 } from "./types";
 import {IOC} from "./ioc";
 import {Fragment} from "./fragment";
-import {detectDevelopmentMode} from "./helpers";
-import {HttpAdaptor} from "./adaptors/http-adaptor";
 import {FragmentProcedureResponseBuilder, ProcedureResponseBuilder} from "./procedure-response-builder";
+import {Uws} from "./adaptors/uws";
 
 class Module {
   private fragment!: Fragment;
-  private developmentModeEnabled = detectDevelopmentMode();
-  private adaptors: Adaptor[];
+  private readonly adaptors: Adaptor[];
 
   constructor(adaptors: Adaptor[]) {
     this.adaptors = adaptors;
@@ -31,67 +29,57 @@ class Module {
   }
 
   static run(moduleCtor: Constructor<Module>) {
-    const httpAdaptor = new HttpAdaptor();
-    const module = new moduleCtor([httpAdaptor]);
+    const uws = new Uws();
+    const module = new moduleCtor([uws]);
 
-    module.init();
+    return module.init();
   }
 
   async init() {
     assertType(this.constructor, SERVICE_TYPE.MODULE);
 
     await this.onBeforeInit();
-    const configuration = Reflect.getMetadata(META_TYPES.CONFIGURATION, this.constructor) as ModuleConfiguration;
 
-    configuration.bootstrap.forEach(service => this.registerModules(service));
-
+    this.bootstrapDependencies();
     this.connectFragmentToRouter();
     this.connectConfiguration();
 
-    for (let adaptor of this.adaptors) {
-      await adaptor.init(this.adaptorCallback);
-      await adaptor.start();
+    for (const adaptor of this.adaptors) {
+      await adaptor
+        .init(this.adaptorCallback)
+        .then(() => adaptor.start());
     }
+  }
+
+  private bootstrapDependencies() {
+    const configuration = Reflect.getMetadata(META_TYPES.CONFIGURATION, this.constructor) as ModuleConfiguration;
+    configuration.bootstrap.forEach(service => this.registerModules(service));
   }
 
   private adaptorCallback(procedure: Procedure, cb: (procedureResponse: ProcedureResponse) => void) {
-    const response = ProcedureResponseBuilder.create(procedure.action, cb) as FragmentProcedureResponseBuilder;
-
-    if (procedure.version !== '3') {
-      return response.upgradeVersion({test: 55, a: 63, hash: 3});
-    }
-
-    response
-      .header('test', 'true')
-      .partial('tt', '4434')
-      .status(204)
-      .done();
-  }
-
-  getConfiguration() {
-    return {
-      params: this.fragment.params
-    };
+    const response = ProcedureResponseBuilder
+      .create(procedure.action, cb) as FragmentProcedureResponseBuilder;
+    //
+    // if (procedure.version !== '3') {
+    //   return response.upgradeVersion({
+    //     params: {
+    //       storefrontId: 'number'
+    //     },
+    //     mapper: {
+    //       storefrontId: ['query', 'env']
+    //     }
+    //   });
+    // }
+    // //
+    // response
+    //   .header('test', 'true')
+    //   .partial('tt', '4434')
+    //   .status(204)
+    //   .done();
   }
 
   async onBeforeInit(): Promise<any> {
     return;
-  }
-
-  private developmentMode() {
-    if (this.developmentModeEnabled) {
-      console.info('Development mode enabled, starting module in preview mode');
-
-      this
-        .init()
-        .then(() => {
-          // const server = new HttpServer(this.router.lookup, {port: process.env.PORT ? +process.env.PORT : DEVELOPMENT_PORT});
-          // console.log(this.router.prettyPrint());
-          // server.listen(() => {
-          //   console.log(`HttpServer started listening on port ${DEVELOPMENT_PORT}`);
-          // });
-        });
-    }
   }
 
   private registerModules(service: Constructor) {

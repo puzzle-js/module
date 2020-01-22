@@ -1,6 +1,36 @@
+/* istanbul ignore file */
+
+
 import {Adaptor, Procedure, ProcedureCallback, ProcedureResponse,} from '../types';
-import fastify from 'fastify';
+import fastify, {FastifyReply, FastifyRequest} from 'fastify';
 import {DEVELOPMENT_PORT} from '../enums';
+import {ServerResponse} from "http";
+
+
+/*
+
+Running 10s test @ http://0.0.0.0:4444
+10 connections
+
+┌─────────┬──────┬──────┬───────┬──────┬─────────┬─────────┬─────────┐
+│ Stat    │ 2.5% │ 50%  │ 97.5% │ 99%  │ Avg     │ Stdev   │ Max     │
+├─────────┼──────┼──────┼───────┼──────┼─────────┼─────────┼─────────┤
+│ Latency │ 0 ms │ 0 ms │ 0 ms  │ 0 ms │ 0.01 ms │ 0.05 ms │ 8.38 ms │
+└─────────┴──────┴──────┴───────┴──────┴─────────┴─────────┴─────────┘
+┌───────────┬─────────┬─────────┬─────────┬─────────┬──────────┬────────┬─────────┐
+│ Stat      │ 1%      │ 2.5%    │ 50%     │ 97.5%   │ Avg      │ Stdev  │ Min     │
+├───────────┼─────────┼─────────┼─────────┼─────────┼──────────┼────────┼─────────┤
+│ Req/Sec   │ 37215   │ 37215   │ 38591   │ 39583   │ 38657.46 │ 773.24 │ 37190   │
+├───────────┼─────────┼─────────┼─────────┼─────────┼──────────┼────────┼─────────┤
+│ Bytes/Sec │ 9.27 MB │ 9.27 MB │ 9.61 MB │ 9.86 MB │ 9.63 MB  │ 195 kB │ 9.26 MB │
+└───────────┴─────────┴─────────┴─────────┴─────────┴──────────┴────────┴─────────┘
+
+Req/Bytes counts sampled once per second.
+
+425k requests in 11.03s, 106 MB read
+
+ */
+
 
 const HTTP_SCHEMA = {
   response: {
@@ -65,11 +95,25 @@ const HTTP_SCHEMA = {
         },
         __upgrade__version: {
           type: 'object',
-          patternProperties: {
-            '.*': {
-              type: 'string',
+          properties: {
+            params: {
+              type: 'object',
+              patternProperties: {
+                '.*': {
+                  type: "string",
+                },
+              },
             },
-          },
+            mapper: {
+              type: 'object',
+              patternProperties: {
+                '.*': {
+                  type: 'array',
+                  items: {type: 'string'}
+                },
+              },
+            }
+          }
         }
       },
     },
@@ -97,6 +141,8 @@ class HttpAdaptor implements Adaptor {
 
   constructor() {
     this.port = process.env.PORT ? +process.env.PORT : DEVELOPMENT_PORT;
+
+    this.routeHandler = this.routeHandler.bind(this);
 
     this.registerPlugins();
     this.registerRoute();
@@ -129,16 +175,19 @@ class HttpAdaptor implements Adaptor {
       method: 'POST',
       url: '/',
       schema: HTTP_SCHEMA,
-      handler: async (request, reply) => {
-        const procedure = this.httpToProcedure(request);
-        this.procedureCallback(
-          procedure,
-          (procedureResponse: ProcedureResponse) => {
-            reply.send(procedureResponse);
-          }
-        );
-      },
+      handler: this.routeHandler,
     });
+  }
+
+
+  private async routeHandler(request: FastifyRequest, reply: FastifyReply<ServerResponse>) {
+    const procedure = this.httpToProcedure(request);
+    this.procedureCallback(
+      procedure,
+      (procedureResponse: ProcedureResponse) => {
+        reply.send(procedureResponse);
+      }
+    );
   }
 }
 
