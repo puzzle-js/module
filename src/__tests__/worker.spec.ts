@@ -38,7 +38,7 @@ describe('[worker.ts]', () => {
     iocMock = sandbox.mock(IOC);
     iocMock.expects('get').returns(service);
 
-    workerThread = new WorkerThread(createPortMock(), workerData);
+    workerThread = new WorkerThread(createPortMock() as any, workerData);
   });
 
   afterEach(() => {
@@ -48,7 +48,7 @@ describe('[worker.ts]', () => {
   it('should create new WorkerThread', () => {
     // Arrange
     iocMock.expects('get').returns(service);
-    const workerThread = new WorkerThread(createPortMock(), workerData);
+    const workerThread = new WorkerThread(createPortMock() as any, workerData);
 
     // Assert
     expect(workerThread).to.be.instanceOf(WorkerThread);

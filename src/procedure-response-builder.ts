@@ -5,7 +5,7 @@ class ProcedureResponseBuilder {
   protected doneCallback: (procedureResponse: ProcedureResponse) => void;
   protected buildParams: ProcedureResponse = {};
 
-  static create(
+  static create<T>(
     type: ProcedureActionType,
     doneCallback: (procedureResponse: ProcedureResponse) => void
   ):
@@ -93,12 +93,12 @@ class ApiProcedureResponseBuilder extends ProcedureResponseBuilder {
 }
 
 class FragmentProcedureResponseBuilder extends ProcedureResponseBuilder {
-  partial(name: string, html: string) {
-    if (!this.buildParams.fragment) this.buildParams.fragment = this.createFragmentConfig();
-    this.buildParams.fragment.html = {
-      [name]: html,
-      ...(this.buildParams.fragment.html || {}),
-    };
+  render(component: string, params: JSONValue) {
+    // if (!this.buildParams.fragment) this.buildParams.fragment = this.createFragmentConfig();
+    // this.buildParams.fragment.html = {
+    //   [name]: html,
+    //   ...(this.buildParams.fragment.html || {}),
+    // };
     return this;
   }
 }

@@ -1,5 +1,7 @@
-import {api, data, del, get, injectable, module, post, put, render, handler, partials,error} from "./decorators";
+import {api, del, error, fragment, get, handler, injectable, module, partials, post, put} from "./decorators";
 import {Module} from "./module";
+import {Uws} from "./adaptors/uws";
+import {ApiProcedureResponseBuilder, FragmentProcedureResponseBuilder} from "./procedure-response-builder";
 
 export = {
   // Abstracts
@@ -7,7 +9,6 @@ export = {
 
   // Decorators
   module,
-  data,
   api,
   handler,
   get,
@@ -15,7 +16,13 @@ export = {
   put,
   post,
   error,
-  render,
+  fragment,
   del,
-  partials
+  partials,
+  ApiProcedureResponseBuilder,
+  FragmentProcedureResponseBuilder,
+
+  adaptors: {
+    Uws
+  }
 };

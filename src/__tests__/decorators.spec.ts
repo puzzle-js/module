@@ -2,23 +2,22 @@ import {expect} from "chai";
 import {
   api,
   assertType,
-  data,
   del,
   error,
   get,
+  fragment,
   handler,
   injectable,
   module,
   partials,
   post,
   put,
-  render
 } from "../decorators";
 import * as sinon from "sinon";
 import {IOC} from "../ioc";
 import * as faker from "faker";
 import {META_TYPES, SERVICE_TYPE} from "../enums";
-import {ApiHandler} from "../types";
+import {Adaptor, ApiHandler, Constructor} from "../types";
 
 
 const sandbox = sinon.createSandbox();
@@ -54,7 +53,8 @@ describe('[decorators.ts]', () => {
     // Arrange
     const configuration = {
       name: faker.random.word(),
-      bootstrap: []
+      bootstrap: [],
+      adaptor: sandbox.stub() as unknown as Constructor<Adaptor>
     };
 
     // Act
@@ -107,21 +107,21 @@ describe('[decorators.ts]', () => {
     // Act
     const test = () => {
       // @ts-ignore
-      @data()
+      @fragment()
       class FragmentData {
       }
     };
 
     // Assert
-    expect(test).to.throw('@handler decorator not added to data service');
+    expect(test).to.throw('@handler decorator not added to fragment');
   });
 
-  it('should mark class dataService', () => {
+  it('should mark class fragment', () => {
     // Arrange
     const stub = sandbox.stub(IOC, 'register');
 
     // Act
-    @data({
+    @fragment({
       path: '',
       mapper: {},
       params: {}
@@ -135,107 +135,8 @@ describe('[decorators.ts]', () => {
 
     // Assert
     const meta = Reflect.getMetadata(META_TYPES.TYPE, FragmentData);
-    expect(meta).to.eq(SERVICE_TYPE.DATA_PROVIDER);
+    expect(meta).to.eq(SERVICE_TYPE.FRAGMENT);
     expect(stub.calledWithExactly(FragmentData)).to.eq(true);
-  });
-
-  it('should mark class as renderService', () => {
-    // Arrange
-    const configuration = {
-      workers: faker.random.number()
-    };
-    const stub = sandbox.stub(IOC, 'register');
-
-    // Act
-    @render(configuration)
-    class FragmentRender {
-      @handler
-      render() {
-
-      }
-    }
-
-    // Assert
-    const meta = Reflect.getMetadata(META_TYPES.TYPE, FragmentRender);
-    const metaFile = Reflect.getMetadata(META_TYPES.FILE_PATH, FragmentRender);
-    const metaConfiguration = Reflect.getMetadata(META_TYPES.CONFIGURATION, FragmentRender);
-    expect(meta).to.eq(SERVICE_TYPE.RENDER_ENGINE);
-    expect(metaFile).to.eq(__filename);
-    expect(metaConfiguration).to.eq(configuration);
-    expect(stub.calledWithExactly(FragmentRender)).to.eq(true);
-  });
-
-  it('should throw error if render handler not registered', () => {
-    // Arrange
-    const configuration = {
-      workers: faker.random.number()
-    };
-
-    // Act
-    const test = () => {
-      @render(configuration)
-      class FragmentRender {
-
-      }
-    };
-
-    // Assert
-    expect(test).to.throw('@handler decorator not added to render service')
-  });
-
-
-  it('should add handler method to class meta', () => {
-    // Act
-    @render()
-    class FragmentRender {
-      @handler
-      render() {
-
-      }
-    }
-
-    // Assert
-    const handlerMeta = Reflect.getMetadata(META_TYPES.HANDLER, FragmentRender);
-    expect(handlerMeta).to.eq('render');
-  });
-
-  it('should add partials to render', () => {
-    // Arrange
-    const partial = faker.random.word();
-
-    // Act
-    @render()
-    class FragmentRender {
-      @handler
-      @partials(['main', partial])
-      render() {
-
-      }
-    }
-
-    // Assert
-    const handlerMeta = Reflect.getMetadata(META_TYPES.RENDER_PARTIALS, FragmentRender);
-    expect(handlerMeta).to.deep.eq(['main', partial]);
-  });
-
-  it('should add error handler to service', () => {
-    // Act
-    @render()
-    class FragmentRender {
-      @handler
-      render() {
-
-      }
-
-      @error
-      error() {
-
-      }
-    }
-
-    // Assert
-    const handlerMeta = Reflect.getMetadata(META_TYPES.ERROR_HANDLER, FragmentRender);
-    expect(handlerMeta).to.eq('error');
   });
 
   describe("Api meta decorators", () => {
@@ -248,7 +149,7 @@ describe('[decorators.ts]', () => {
         // Act
         @api(path)
         class Api {
-          @del(endpoint)
+          @del(endpoint, {})
           del() {
 
           }
@@ -296,7 +197,7 @@ describe('[decorators.ts]', () => {
         // Act
         @api(path)
         class Api {
-          @put(endpoint)
+          @put(endpoint, {})
           put() {
 
           }
@@ -344,7 +245,7 @@ describe('[decorators.ts]', () => {
         // Act
         @api(path)
         class Api {
-          @post(endpoint)
+          @post(endpoint, {})
           post() {
 
           }
@@ -393,7 +294,7 @@ describe('[decorators.ts]', () => {
         // Act
         @api(path)
         class Api {
-          @get(endpoint)
+          @get(endpoint, {})
           getMethod() {
 
           }
@@ -469,36 +370,6 @@ describe('[decorators.ts]', () => {
     expect(test).to.throw();
   });
 
-  it('should set schema for the route', () => {
-    // Arrange
-    const path = faker.random.word();
-    const endpoint = faker.random.word();
-
-    // Act
-    @api(path)
-    class Api {
-      @post(endpoint, {
-        schema: {
-          type: 'object',
-          properties: {
-            name: {
-              type: 'string'
-            }
-          }
-        }
-      })
-      post() {
-
-      }
-    }
-
-
-    // Assert
-    const metaType = Reflect.getMetadata(META_TYPES.TYPE, Api);
-    expect(metaType).to.eq(SERVICE_TYPE.API);
-    const metaHandlers = Reflect.getMetadata(META_TYPES.API_HANDLERS, Api) as ApiHandler[];
-    expect(metaHandlers[0].stringifier).to.be.a('function');
-  });
 
   it('should ', () => {
     // Arrange

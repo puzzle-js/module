@@ -1,17 +1,16 @@
 import "reflect-metadata";
 import {
   ApiHandler,
+  ApiOptions,
   Constructor,
   DataOptions,
   EndpointOptions,
   HTTP_METHODS,
-  ModuleConfiguration,
-  RenderOptions
+  ModuleConfiguration
 } from "./types";
 import {META_TYPES, SERVICE_TYPE} from "./enums";
 import {IOC} from "./ioc";
 import {getDecoratedFile} from "./helpers";
-import fastJsonStringify from "fast-json-stringify";
 
 /**
  * @description Sets class as Base Module which will be bootstrapped
@@ -37,13 +36,16 @@ function injectable<T extends Constructor>(constructor: T) {
 /**
  * @description Sets class as api
  * @param path
+ * @param options
  */
-function api(path: string) {
+function api(path: string, options?: ApiOptions) {
   if (!path) throw new Error('Api path must be provided');
 
   return <T extends { new(...args: unknown[]): {} }>(constructor: T) => {
     Reflect.defineMetadata(META_TYPES.TYPE, SERVICE_TYPE.API, constructor);
+    Reflect.defineMetadata(META_TYPES.CONFIGURATION, options || {}, constructor);
     Reflect.defineMetadata(META_TYPES.PATH, path, constructor);
+    Reflect.defineMetadata(META_TYPES.FILE_PATH, getDecoratedFile(), constructor);
 
     IOC.register(constructor);
   }
@@ -51,40 +53,42 @@ function api(path: string) {
 
 /**
  * @description Sets class as data provider for fragment
- * @param dataOptions
+ * @param options
  */
-function data(dataOptions: DataOptions) {
+function fragment(options: DataOptions) {
   return <T extends { new(...args: unknown[]): {} }>(constructor: T) => {
-    Reflect.defineMetadata(META_TYPES.TYPE, SERVICE_TYPE.DATA_PROVIDER, constructor);
-    Reflect.defineMetadata(META_TYPES.CONFIGURATION, dataOptions || {}, constructor);
+    Reflect.defineMetadata(META_TYPES.TYPE, SERVICE_TYPE.FRAGMENT, constructor);
+    Reflect.defineMetadata(META_TYPES.CONFIGURATION, options || {}, constructor);
     Reflect.defineMetadata(META_TYPES.FILE_PATH, getDecoratedFile(), constructor);
 
 
-    if (!Reflect.getMetadata(META_TYPES.HANDLER, constructor)) throw new Error(`@handler decorator not added to data service(${constructor.name}) handler method`);
+    //todo validation -> class
+    if (!Reflect.getMetadata(META_TYPES.HANDLER, constructor)) throw new Error(`@handler decorator not added to fragment service(${constructor.name}) handler method`);
 
-    if (JSON.stringify(Object.keys(dataOptions.mapper).sort()) !== JSON.stringify(Object.keys(dataOptions.params).sort())) {
-      throw new Error(`@data params and mapper is not matching for service(${constructor.name})`);
+
+    if (JSON.stringify(Object.keys(options.mapper).sort()) !== JSON.stringify(Object.keys(options.params).sort())) {
+      throw new Error(`@fragment params and mapper is not matching for service(${constructor.name})`);
     }
 
     IOC.register(constructor);
   }
 }
 
-/**
- * @description Sets class as render provider for fragment
- * @param renderOptions
- */
-function render(renderOptions?: RenderOptions) {
-  return <T extends { new(...args: unknown[]): {} }>(constructor: T) => {
-    Reflect.defineMetadata(META_TYPES.TYPE, SERVICE_TYPE.RENDER_ENGINE, constructor);
-    Reflect.defineMetadata(META_TYPES.CONFIGURATION, renderOptions || {}, constructor);
-    Reflect.defineMetadata(META_TYPES.FILE_PATH, getDecoratedFile(), constructor);
-
-    if (!Reflect.getMetadata(META_TYPES.HANDLER, constructor)) throw new Error(`@handler decorator not added to render service(${constructor.name}) handler method`);
-
-    IOC.register(constructor);
-  }
-}
+// /**
+//  * @description Sets class as render provider for fragment
+//  * @param renderOptions
+//  */
+// function render(renderOptions?: RenderOptions) {
+//   return <T extends { new(...args: unknown[]): {} }>(constructor: T) => {
+//     Reflect.defineMetadata(META_TYPES.TYPE, SERVICE_TYPE.RENDER_ENGINE, constructor);
+//     Reflect.defineMetadata(META_TYPES.CONFIGURATION, renderOptions || {}, constructor);
+//     Reflect.defineMetadata(META_TYPES.FILE_PATH, getDecoratedFile(), constructor);
+//
+//     if (!Reflect.getMetadata(META_TYPES.HANDLER, constructor)) throw new Error(`@handler decorator not added to render service(${constructor.name}) handler method`);
+//
+//     IOC.register(constructor);
+//   }
+// }
 
 /**
  * Sets error handler for fragments
@@ -110,10 +114,10 @@ function partials(partials: string[]) {
  * @param target
  * @param propertyKey
  */
-function handler(target: object, propertyKey: string, descriptor: TypedPropertyDescriptor<any>) {
+function handler(target: object, propertyKey: string) {
   Reflect.defineMetadata(META_TYPES.HANDLER, propertyKey, target.constructor);
 
-  console.log(descriptor.value.arg);
+  // console.log(descriptor.value.arg);
 }
 
 /**
@@ -122,7 +126,7 @@ function handler(target: object, propertyKey: string, descriptor: TypedPropertyD
  * @param options
  */
 
-function get(path: string, options?: EndpointOptions) {
+function get(path: string, options: EndpointOptions) {
   if (!path) throw new Error('Get path must be provided');
 
   return (target: object, propertyKey: string) => {
@@ -135,7 +139,7 @@ function get(path: string, options?: EndpointOptions) {
  * @param path
  * @param options
  */
-function put(path: string, options?: EndpointOptions) {
+function put(path: string, options: EndpointOptions) {
   if (!path) throw new Error('Put path must be provided');
 
   return (target: object, propertyKey: string) => {
@@ -148,7 +152,7 @@ function put(path: string, options?: EndpointOptions) {
  * @param path
  * @param options
  */
-function del(path: string, options?: EndpointOptions) {
+function del(path: string, options: EndpointOptions) {
   if (!path) throw new Error('Del path must be provided');
 
   return (target: object, propertyKey: string) => {
@@ -161,7 +165,7 @@ function del(path: string, options?: EndpointOptions) {
  * @param path
  * @param options
  */
-function post(path: string, options?: EndpointOptions) {
+function post(path: string, options: EndpointOptions) {
   if (!path) throw new Error('Post path must be provided');
 
   return (target: object, propertyKey: string) => {
@@ -183,20 +187,15 @@ const assertType = (target: object, type: SERVICE_TYPE, error?: string) => {
 };
 
 
-const addRouteType = (target: object, path: string, handler: string, method: HTTP_METHODS, options?: EndpointOptions) => {
-  const handlers = Reflect.getMetadata(META_TYPES.API_HANDLERS, target) as ApiHandler[] || [];
+const addRouteType = (target: object, path: string, handler: string, method: HTTP_METHODS, options: EndpointOptions) => {
+  const handlers = Reflect.getMetadata(META_TYPES.API_HANDLERS, target) as Map<string, ApiHandler> || new Map();
 
-  const handlerMeta = {
+  handlers.set(path, {
     method,
     path,
     handler
-  } as ApiHandler;
+  });
 
-  if (options && options.schema) {
-    handlerMeta.stringifier = fastJsonStringify(options.schema);
-  }
-
-  handlers.push(handlerMeta);
 
   Reflect.defineMetadata(META_TYPES.API_HANDLERS, handlers, target);
 };
@@ -206,12 +205,11 @@ export {
   injectable,
   module,
   error,
-  render,
   handler,
   api,
+  fragment,
   get,
   post,
-  data,
   put,
   del,
   assertType

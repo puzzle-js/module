@@ -158,7 +158,7 @@ class HttpAdaptor implements Adaptor {
       action: request.body.action,
       version: request.body.version,
       params: request.body.params,
-      command: request.body.command,
+      api: request.body.api,
     };
   }
 

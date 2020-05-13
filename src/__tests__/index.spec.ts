@@ -2,7 +2,6 @@ import {expect} from "chai";
 import {
   module,
   api,
-  data,
   del,
   get,
   injectable,
@@ -11,9 +10,10 @@ import {
   handler,
   partials,
   error,
-  render
+  fragment
 } from "../decorators";
 import {Module} from "../module";
+import {Uws} from "../adaptors/uws";
 
 describe('[index.ts]', () => {
   it('should export lib contents', () => {
@@ -28,14 +28,17 @@ describe('[index.ts]', () => {
       put,
       del,
       Module,
-      render,
       error,
       partials,
       handler,
       injectable,
-      data,
+      fragment,
       api,
-      module
+      module,
+
+      adaptors: {
+        Uws
+      }
     });
   });
 });

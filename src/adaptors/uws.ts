@@ -122,26 +122,25 @@ class Uws implements Adaptor {
   async init(procedureCallback: ProcedureCallback) {
     this.procedureCallback = procedureCallback;
 
-    this.server.post('/*', (res, req) => {
+    this.server.post('/*', res => {
       this.readJsonStream(res, (procedure: Procedure) => {
         this.procedureCallback(
           procedure,
           (procedureResponse: ProcedureResponse) => {
             res
               .writeHeader('content-type', 'application/json')
-              .end(httpResponseStringifier(procedureResponse))
+              .end(JSON.stringify(procedureResponse))
           }
         );
       }, () => {
         res
-          .writeStatus('400')
           .end();
       });
     });
   }
 
-  async start(): Promise<void> {
-    this.server.listen(4445, token => {
+  async start(port: number): Promise<void> {
+    this.server.listen(port, token => {
       console.log(token);
     });
   }

@@ -1,16 +1,16 @@
 import {IOC} from "./ioc";
-import {RENDER_TYPES} from "./enums";
-import {WorkerProps} from "./types";
-import {parentPort, workerData} from "worker_threads";
+import {WorkerMessage, WorkerProps} from "./types";
+import {MessagePort, parentPort, workerData} from "worker_threads";
 import Worker from "worker-threads-promise";
 
 
 class WorkerThread {
-  private parentPort: any;
-  private workerData: WorkerProps;
+  // tslint:disable-next-line:no-any
   private service: any;
+  private parentPort: MessagePort;
+  private workerData: WorkerProps;
 
-  constructor(parentPort: any, workerData: WorkerProps) {
+  constructor(parentPort: MessagePort, workerData: WorkerProps) {
     Worker.connect(parentPort);
 
     this.parentPort = parentPort;
@@ -26,20 +26,17 @@ class WorkerThread {
   private createService() {
     const renderService = require(this.workerData.decoratedFile);
     const serviceConstructor = renderService[this.workerData.serviceName];
-    this.service = IOC.get(serviceConstructor) as any;
+    this.service = IOC.get(serviceConstructor);
   }
 
-  messageHandler(msg: { type: RENDER_TYPES, data: any }) {
-    if (msg.type === RENDER_TYPES.HANDLER) {
-      return this.service[this.workerData.handler](msg.data);
-    } else if (msg.type === RENDER_TYPES.ERROR) {
-      return this.service[this.workerData.errorHandler](msg.data);
-    }
+  messageHandler(msg: WorkerMessage) {
+    this.service[msg.handler](msg.data);
   }
 }
 
 if (typeof process.env.JEST_WORKER_ID === "undefined") {
-  new WorkerThread(parentPort, workerData);
+  // tslint:disable-next-line:no-unused-expression
+  new WorkerThread(parentPort as MessagePort, workerData);
 }
 
 

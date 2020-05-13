@@ -1,5 +1,4 @@
-import {Schema} from "fast-json-stringify";
-import {ProcedureActionType} from "./enums";
+import {ProcedureActionType, RENDER_TYPES} from "./enums";
 
 // tslint:disable-next-line:no-any
 type Constructor<T = unknown> = new(...args: any[]) => T;
@@ -11,13 +10,13 @@ type Stringifier = (doc: object | unknown[] | string | number | boolean | null) 
 interface ModuleConfiguration {
   name: string;
   bootstrap: Constructor[];
+  adaptor: Constructor<Adaptor>;
 }
 
 interface ApiHandler {
   handler: string;
   method: HTTP_METHODS;
   path: string;
-  stringifier?: Stringifier;
 }
 
 interface WorkerOptions {
@@ -36,14 +35,19 @@ interface ParsableParamsObject {
 
 type MapperTypes = 'query' | 'param' | 'body' | 'config' | 'header' | 'cookie';
 
-
-
-interface DataOptions extends WorkerOptions {
+interface MapperOptions {
   params: ParsableParamsObject;
-  path: string;
   mapper: {
     [x: string]: MapperTypes | MapperTypes[];
   }
+}
+
+interface ApiOptions extends WorkerOptions, MapperOptions {
+
+}
+
+interface DataOptions extends WorkerOptions, MapperOptions {
+  path: string;
 }
 
 interface DataRequest {
@@ -65,15 +69,15 @@ interface RenderResponse {
   main: string;
 }
 
-interface EndpointOptions {
-  schema?: Schema;
-}
 
 interface WorkerProps {
-  decoratedFile: string,
-  serviceName: string,
-  handler: string,
-  errorHandler: string
+  decoratedFile: string;
+  serviceName: string;
+}
+
+interface WorkerMessage {
+  handler: string;
+  data: JSONValue;
 }
 
 type JSONPrimitive = string | number | boolean | null;
@@ -89,7 +93,10 @@ interface JSONArray extends Array<JSONValue> {
 
 interface Procedure {
   action: ProcedureActionType;
-  command: string;
+  api?: {
+    base: string;
+    endpoint: string;
+  }
   params: Record<string, JSONValue | JSONObject | JSONArray>;
   version: string;
 }
@@ -117,7 +124,11 @@ type ProcedureCallback = (command: Procedure, responseHandler: (response: Proced
 interface Adaptor {
   init(cb: ProcedureCallback): Promise<void>;
 
-  start(): Promise<void>;
+  start(port: number): Promise<void>;
+}
+
+interface EndpointOptions {
+
 }
 
 
@@ -128,8 +139,10 @@ export {
   EndpointOptions,
   Constructor,
   ApiHandler,
+  ApiOptions,
   DataRequest,
   DataResponse,
+  WorkerMessage,
   RenderResponse,
   HTTP_METHODS,
   RenderOptions,

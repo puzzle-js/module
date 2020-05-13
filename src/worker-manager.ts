@@ -1,7 +1,7 @@
 import Worker from "worker-threads-promise";
 import path from "path";
 import {DEFAULT_CONTENT_TIMEOUT} from "./enums";
-import {WorkerProps} from "./types";
+import {WorkerMessage, WorkerProps} from "./types";
 
 // todo Workers might not be ready!
 class WorkerGroup {
@@ -12,9 +12,9 @@ class WorkerGroup {
     this.workers = workers;
   }
 
-  async distribute<T>(data: unknown, timeout: number = DEFAULT_CONTENT_TIMEOUT) {
+  async distribute<T>(message: WorkerMessage, timeout: number = DEFAULT_CONTENT_TIMEOUT) {
     if (!this.workers[this.i]) this.i = 0;
-    return this.workers[this.i++].postMessageAsync(data, {timeout}) as Promise<T>
+    return this.workers[this.i++].postMessageAsync(message, {timeout}) as Promise<T>
   }
 }
 
@@ -22,17 +22,19 @@ class WorkerManager {
   static supported: boolean = WorkerManager.isWorkerSupported();
   static worker = WorkerManager.getWorkerThreads();
 
-  static createWorkerGroup(decoratedFile: string, handler: string, serviceName: string, amount: number, errorHandler?: string) {
+  static createWorkerGroup(decoratedFile: string, serviceName: string, amount: number) {
     if (!this.worker) throw new Error('Workers are not supported');
 
-    const workers = new Array(amount).fill(null).map(_ => new this.worker!(path.join(__dirname, './worker.js'), {
-      workerData: {
-        decoratedFile,
-        serviceName,
-        handler,
-        errorHandler
-      } as WorkerProps
-    }));
+    const workers = new Array(amount)
+      .fill(null)
+      .map(_ => new this.worker!(path.join(__dirname, './worker.js'), {
+        workerData: {
+          decoratedFile,
+          serviceName,
+        } as WorkerProps
+      }));
+
+    console.log(decoratedFile, serviceName);
 
     return new WorkerGroup(workers);
   }
